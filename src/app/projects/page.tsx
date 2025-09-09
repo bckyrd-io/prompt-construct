@@ -78,7 +78,7 @@ function Header() {
               Contacts
             </button>
             <Link href="#get-quote">
-              <button className='bg-primary text-gray-800 px-6 py-2 font-medium hover:bg-primary/90 transition-colors'>
+              <button className='bg-primary rounded-sm text-gray-800 px-6 py-2 font-medium hover:bg-primary/90 transition-colors'>
                 Request Quote
               </button>
             </Link>
@@ -224,7 +224,12 @@ export default function ProjectsPage() {
                   <p className="text-gray-600 text-sm mb-3">{p.desc}</p>
                   <p className="text-primary text-xs font-mono mb-4">{p.tags}</p>
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <button onClick={() => setSelected(p)} className="text-sm text-gray-600 hover:text-primary">View Details</button>
+                    <button 
+                      onClick={() => setSelected(p)} 
+                      className="text-sm text-gray-600 hover:text-primary px-3 py-1.5 rounded-md border border-gray-300 hover:border-primary transition-colors"
+                    >
+                      View Details
+                    </button>
                     <span className="text-xs text-gray-400">{p.type}</span>
                   </div>
                 </div>

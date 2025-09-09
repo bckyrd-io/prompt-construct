@@ -108,7 +108,7 @@ function Header() {
             </button>
             {/* Replaced Contact link with Get Quote button */}
             <Link href="#get-quote">
-              <button className={`${isScrolled ? 'text-gray-800 hover:text-gray-600' : 'text-white hover:text-gray-200'} transition-colors bg-primary px-6 py-2 font-medium hover:bg-primary/90`}>
+              <button className={`${isScrolled ? 'text-gray-800 hover:text-gray-600' : 'text-white hover:text-gray-200'} transition-colors bg-primary px-6 py-2 font-medium rounded-sm hover:bg-primary/90`}>
                 Request Quote
               </button>
             </Link>
@@ -293,7 +293,7 @@ function AboutSection() {
           </p>
           <Link
             href="/about"
-            className="inline-block border border-primary text-primary px-8 py-4  hover:bg-white/90 transition-colors"
+            className="inline-block border border-primary rounded-sm text-primary px-8 py-4  hover:bg-white/90 transition-colors"
           >
             Select Your Project
           </Link>
@@ -556,9 +556,9 @@ function ContactCTASection() {
               type="text"
               name="name"
               placeholder="Your Name"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:border-[color:rgba(0,0,0,0.35)]"
               required
             />
             <input
@@ -567,7 +567,7 @@ function ContactCTASection() {
               placeholder="Your Email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:border-[color:rgba(0,0,0,0.35)]"
+              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent rounded-md"
               required
             />
             <textarea
@@ -576,12 +576,12 @@ function ContactCTASection() {
               value={formData.message}
               onChange={handleInputChange}
               rows={4}
-              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:border-[color:rgba(0,0,0,0.35)] resize-none"
+              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent rounded-md resize-none"
               required
             />
             <button
               type="submit"
-              className="w-full bg-primary text-white px-6 py-3 hover:bg-primary/90 transition-colors font-medium"
+              className="w-full bg-primary text-white px-6 py-3 hover:bg-primary/90 transition-colors font-medium rounded-md"
             >
               Send Message
             </button>
