@@ -3,50 +3,98 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-background: #1E3A8A;
-  --color-foreground: #FFFFFF;
+  --color-background: #FFFFFF;
+  --color-foreground: #36454F;
 
   --color-card: #FFFFFF;
-  --color-card-foreground: #1E3A8A;
+  --color-card-foreground: #36454F;
 
   --color-popover: #FFFFFF;
-  --color-popover-foreground: #1E3A8A;
+  --color-popover-foreground: #36454F;
 
-  --color-primary: #1E3A8A;
+  --color-primary: #ff9800;
   --color-primary-foreground: #FFFFFF;
 
-  --color-secondary: #F8F9FA;
-  --color-secondary-foreground: #1E3A8A;
+  --color-secondary: #ffc107;
+  --color-secondary-foreground: #FFFFFF;
 
-  --color-muted: #374151;
+  --color-muted: #6B7B8C;
   --color-muted-foreground: #FFFFFF;
 
-  --color-accent: #F8F9FA;
-  --color-accent-foreground: #1E3A8A;
+  --color-accent: #FF8C00;
+  --color-accent-foreground: #FFFFFF;
 
-  --color-destructive: #EF4444;
+  --color-destructive: #DC2626;
   --color-destructive-foreground: #FFFFFF;
 
-  --color-border: #E5E5E5;
-  --color-input: #E5E5E5;
-  --color-ring: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-input: #E2E8F0;
+  --color-ring: #FF6600;
 
-  --color-chart-1: #E67E22;
-  --color-chart-2: #2D8659;
-  --color-chart-3: #1E3A5F;
-  --color-chart-4: #F1C40F;
-  --color-chart-5: #E74C3C;
+  --color-chart-1: #FFD700;
+  --color-chart-2: #FF8C00;
+  --color-chart-3: #4682B4;
+  --color-chart-4: #36454F;
+  --color-chart-5: #DC2626;
 
-  --color-sidebar: #1E3A8A;
+  --color-sidebar: #36454F;
   --color-sidebar-foreground: #FFFFFF;
-  --color-sidebar-primary: #FFFFFF;
-  --color-sidebar-primary-foreground: #1E3A8A;
-  --color-sidebar-accent: #374151;
+  --color-sidebar-primary: #FFD700;
+  --color-sidebar-primary-foreground: #1A202C;
+  --color-sidebar-accent: #FF8C00;
   --color-sidebar-accent-foreground: #FFFFFF;
-  --color-sidebar-border: #FFFFFF;
-  --color-sidebar-ring: #FFFFFF;
+  --color-sidebar-border: #E2E8F0;
+  --color-sidebar-ring: #FFD700;
 
   --color-overlay: rgba(0,0,0,0.5);
+
+  /* Construction-themed additional colors */
+  --color-construction-yellow: #FFD700;
+  --color-construction-orange: #FF8C00;
+  --color-construction-blue: #4682B4;
+  --color-construction-gray: #36454F;
+  --color-construction-red: #DC2626;
+
+  /* High contrast text colors for better readability */
+  --color-text-dark: #1A202C;
+  --color-text-light: #FFFFFF;
+  --color-text-muted: #718096;
+  --color-bg-light: #F7FAFC;
+  --color-bg-dark: #2D3748;
+
+  /* Balanced Construction Color System - Based on Actual Page Usage */
+  
+  /* HEADER ELEMENTS */
+  --color-header-bg: #FFFFFF;             /* White header background */
+  --color-header-text: #36454F;           /* Dark text for navigation links */
+  --color-logo-icon: #FFD700;             /* Gold for HardHat icon */
+  --color-header-button: #FF8C00;         /* Orange for Get Quote button */
+  --color-header-button-text: #FFFFFF;    /* White text on header buttons */
+  
+  /* HERO SECTIONS */
+  --color-hero-text: #FFFFFF;             /* White text on video backgrounds */
+  --color-hero-controls: rgba(255,255,255,0.2); /* Semi-transparent video controls */
+  
+  /* PROCESS SECTION */
+  --color-process-bg: #FFD700;            /* Gold background for process section */
+  --color-process-text: #1A202C;          /* Dark text on gold background */
+  
+  /* WORK/SERVICE SECTIONS */
+  --color-work-icon-bg: #FF8C00;          /* Orange for work/service icons */
+  --color-work-icon-text: #FFFFFF;        /* White text on orange icons */
+  --color-work-tags: #4682B4;             /* Blue for tags */
+  --color-work-links: #4682B4;            /* Blue for View Details/Share links */
+  
+  /* FOOTER */
+  --color-footer-bg: #36454F;             /* Charcoal for footer background */
+  --color-footer-text: #FFFFFF;           /* White text on footer */
+  --color-footer-button: #FFFFFF;         /* White background for footer button */
+  --color-footer-button-text: #FF8C00;    /* Orange text on white button */
+  
+  /* LINKS & HOVER STATES */
+  --color-link: #4682B4;                  /* Steel blue for general links */
+  --color-link-hover: #2C5282;            /* Darker blue on hover */
+  --color-primary-hover: rgba(255,215,0,0.9); /* Gold with opacity on hover */
 
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);
@@ -97,6 +145,7 @@
 @layer utilities {
   body {
     font-family: var(--font-body);
+    scroll-behavior: smooth;
   }
 }
 

@@ -4,12 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  ChevronLeft,
-  ChevronRight,
+
   Menu,
   X,
   MapPin,
@@ -21,11 +16,19 @@ import {
   Instagram,
   Youtube,
   HardHat,
-  ClipboardCheck,
-  Users,
   Building2,
-  Shield,
-  PencilRuler
+  PencilRuler,
+  ClipboardList,
+  Wrench,
+  Home,
+  Factory,
+  Layers,
+  Paintbrush,
+  Zap,
+  Droplets,
+  Wind,
+  Hammer,
+  SquareStack
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -33,18 +36,29 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <Header />
       <HeroSection />
-      <WhoWeAreSection />
-      <OurWorkSection />
-      <OurProcessSection />
-      <ResourcesSection />
-      <FeaturedProjectSection />
+      <AboutSection />
+      <ProcessSection />
+      <Hero2Section />
+      <WorkSection />
+      <Hero3Section />
       <ServiceSection />
+      <ContactCTASection />
       <FooterSection />
     </div>
   );
 }
 
 // Header Component
+
+function scrollToSection(id: string) {
+  if (typeof window !== 'undefined') {
+    const section = document.getElementById(id);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+}
+
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -59,35 +73,43 @@ function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-dark-600/95 backdrop-blur-sm shadow-sm' : 'bg-transparent'
-        }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 
+        ${isScrolled ? 'bg-white/80 backdrop-blur-xl shadow-md' : 'bg-transparent'}
+      `}
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <HardHat size={32} className="text-orange-400" /> {/* Helmet icon */}
-            {/* <div className="text-white font-bold text-xl lg:text-2xl">
-              ROY CONSTRUCTION
-            </div> */}
+            <HardHat size={32} className={isScrolled ? 'text-primary' : 'text-primary'} /> {/* Helmet icon */}
+            <div className={isScrolled ? 'text-gray-800 font-bold text-xl lg:text-2xl' : 'text-white font-bold text-xl lg:text-2xl'}>
+              Roy Construction
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            <Link href="/about" className="text-white hover:text-white/80 transition-colors">
-              About
-            </Link>
-            <Link href="/services" className="text-white hover:text-white/80 transition-colors">
+            <button
+              className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}
+              onClick={() => scrollToSection('services')}
+              type="button"
+            >
               Services
+            </button>
+            <Link href="/projects" className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}>
+              Projects
             </Link>
-            <Link href="/contact" className="text-white hover:text-white/80 transition-colors">
-              Contact
-            </Link>
-
+            <button
+              className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}
+              onClick={() => scrollToSection('contact')}
+              type="button"
+            >
+              Contacts
+            </button>
             {/* Replaced Contact link with Get Quote button */}
-            <Link href="/get-quote">
-              <button className="bg-orange-600 text-white px-6 py-2  font-medium hover:bg-orange-700 transition-colors">
-                Get Quote
+            <Link href="#get-quote">
+              <button className={`${isScrolled ? 'text-gray-800 hover:text-gray-600' : 'text-white hover:text-gray-200'} transition-colors bg-primary px-6 py-2 font-medium hover:bg-primary/90`}>
+                Request Quote
               </button>
             </Link>
           </nav>
@@ -95,7 +117,7 @@ function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden text-white p-2"
+            className={isScrolled ? 'lg:hidden text-gray-800 p-2' : 'lg:hidden text-white p-2'}
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -103,51 +125,42 @@ function Header() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-orange-600/95 backdrop-blur-sm border-t border-white/20">
+          <div className="lg:hidden bg-primary/95 backdrop-blur-sm border-t border-white/20">
             <nav className="py-4 space-y-2">
-              <Link
-                href="/about"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link
-                href="/services"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
+              <button
+                className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  scrollToSection('services');
+                }}
+                type="button"
               >
                 Services
-              </Link>
+              </button>
               <Link
-                href="/work"
+                href="/projects"
                 className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Our Work
+                Projects
               </Link>
-              <Link
-                href="/careers"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
+              <button
+                className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  scrollToSection('contact');
+                }}
+                type="button"
               >
-                Careers
-              </Link>
+                Contacts
+              </button>
               <Link
-                href="/resources"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Resources
-              </Link>
-              {/* Replaced Contact link with Get Quote button */}
-              <Link
-                href="/get-quote"
+                href="#get-quote"
                 className="block px-4 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <button className="w-full bg-orange-600 text-white py-2  font-medium hover:bg-orange-700 transition-colors">
-                  Get Quote
+                <button className="w-full bg-primary text-white py-2 font-medium hover:bg-primary/90 transition-colors">
+                  Request Quote
                 </button>
               </Link>
             </nav>
@@ -160,35 +173,12 @@ function Header() {
 
 // Hero Section Component
 function HeroSection() {
+  const [isMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
-  const [showControls, setShowControls] = useState(false);
 
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
 
-  const handleWatchVideo = () => {
-    setShowControls(true);
-    if (videoRef.current && isMuted) {
-      toggleMute();
-    }
-  };
+
 
   return (
     <section className="relative h-screen overflow-hidden">
@@ -201,45 +191,84 @@ function HeroSection() {
         muted={isMuted}
         playsInline
       >
-        <source src="https://hoar.com/wp-content/uploads/2020/02/Hoar-Looping-1.5mbps.mp4" type="video/mp4" />
+        <source src="/gate.mp4" type="video/mp4" />
       </video>
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40" />
+      {/* Overlay - Removed to show videos clearly */}
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-center justify-center text-center">
-        <div className="max-w-4xl mx-auto px-4">
+      <div className="relative z-10 h-full flex items-center justify-left text-left">
+        <div className="max-w-4xl  px-12">
           <h1 className="text-5xl lg:text-7xl  text-white mb-8 leading-tight">
-            ROY <br /> CONSTRUCTION
+            CONSTRUCTION
+            PROCESS
           </h1>
 
         </div>
       </div>
 
-      {/* Video Controls */}
-      {showControls && (
-        <div className="absolute bottom-8 left-8 flex items-center space-x-4 z-20">
-          <button
-            onClick={togglePlay}
-            className="bg-white/20 hover:bg-white/30 text-white p-3 -full backdrop-blur-sm transition-colors"
-          >
-            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-          </button>
-          <button
-            onClick={toggleMute}
-            className="bg-white/20 hover:bg-white/30 text-white p-3 -full backdrop-blur-sm transition-colors"
-          >
-            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-          </button>
+    </section>
+  );
+}
+// Hero Section Component
+function Hero3Section() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted] = useState(true);
+
+
+
+  return (
+    <section className="relative h-screen overflow-hidden">
+      {/* Video Background */}
+      <video
+        ref={videoRef}
+        className="absolute inset-0 w-full h-full object-cover"
+        autoPlay
+        loop
+        muted={isMuted}
+        playsInline
+      >
+        <source src="/metal.mp4" type="video/mp4" />
+      </video>
+
+      {/* Overlay - Removed to show videos clearly */}
+
+      {/* Content */}
+      <div className="relative z-10 h-full flex items-center justify-left text-left">
+        <div className="max-w-4xl  px-12">
+          <h1 className="text-5xl lg:text-7xl  text-white mb-8 leading-tight">
+            MORDERN GATE <br /> ON SALE
+          </h1>
+
         </div>
-      )}
+      </div>
+
+
+    </section>
+  );
+}
+// Hero Section Component
+function Hero2Section() {
+
+
+
+ 
+
+  return (
+    <section className="relative h-screen overflow-hidden">
+      {/* Video Background */}
+      <Image
+        src="/dimension.jpg"
+        alt="Construction professional"
+        fill
+        className="absolute inset-0 w-full h-full object-cover"
+      />
     </section>
   );
 }
 
 // Who We Are Section Component
-function WhoWeAreSection() {
+function AboutSection() {
   return (
     <section className="relative py-20 lg:py-32 overflow-hidden">
       {/* Background Image */}
@@ -256,9 +285,9 @@ function WhoWeAreSection() {
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4">
         <div className="max-w-3xl">
-          <h2 className="text-4xl lg:text-5xl  text-black mb-8 leading-tight">
+          {/* <h2 className="text-4xl lg:text-5xl  text-black mb-8 leading-tight">
             Your Trusted Construction Partner in Malawi
-          </h2>
+          </h2> */}
           <p className="text-lg lg:text-xl text-black/90 mb-8 leading-relaxed">
             Roy Construction is a leading construction company in Malawi, specializing in general construction,
             building design and planning, and construction management. Based in Lilongwe, we serve clients
@@ -267,9 +296,9 @@ function WhoWeAreSection() {
           </p>
           <Link
             href="/about"
-            className="inline-block bg-white text-orange-600 px-8 py-4  hover:bg-white/90 transition-colors text-lg font-medium"
+            className="inline-block border border-primary text-primary px-8 py-4  hover:bg-white/90 transition-colors"
           >
-            Learn More
+            Select Your Project
           </Link>
         </div>
       </div>
@@ -278,36 +307,31 @@ function WhoWeAreSection() {
 }
 
 // Our Process Section Component
-function OurProcessSection() {
+function ProcessSection() {
   const processItems = [
-    {
-      title: "Quality Control",
-      icon: <ClipboardCheck size={32} className="text-white" />
-    },
-    {
-      title: "Project Management",
-      icon: <Users size={32} className="text-white" />
-    },
-    {
-      title: "Construction Management",
-      icon: <Building2 size={32} className="text-white" />
-    },
-    {
-      title: "Safety First",
-      icon: <Shield size={32} className="text-white" />
-    },
-    {
-      title: "Design & Planning",
-      icon: <PencilRuler size={32} className="text-white" />
-    }
+    { title: 'General Contracting', icon: <HardHat size={32} className="text-white" /> },
+    { title: 'Building Design & Planning', icon: <PencilRuler size={32} className="text-white" /> },
+    { title: 'Construction Management', icon: <ClipboardList size={32} className="text-white" /> },
+    { title: 'Renovation & Restoration', icon: <Wrench size={32} className="text-white" /> },
+    { title: 'New Home Construction', icon: <Home size={32} className="text-white" /> },
+    { title: 'Commercial Construction', icon: <Building2 size={32} className="text-white" /> },
+    { title: 'Industrial Construction', icon: <Factory size={32} className="text-white" /> },
+    { title: 'Land Development', icon: <MapPin size={32} className="text-white" /> },
+    { title: 'Roofing & Siding', icon: <Layers size={32} className="text-white" /> },
+    { title: 'Interior & Exterior Finishing', icon: <Paintbrush size={32} className="text-white" /> },
+    { title: 'Electrical Services', icon: <Zap size={32} className="text-white" /> },
+    { title: 'Plumbing Services', icon: <Droplets size={32} className="text-white" /> },
+    { title: 'HVAC Services', icon: <Wind size={32} className="text-white" /> },
+    { title: 'Carpentry Services', icon: <Hammer size={32} className="text-white" /> },
+    { title: 'Masonry Services', icon: <SquareStack size={32} className="text-white" /> },
   ];
 
   return (
-    <section className="bg-orange-600 py-20 lg:py-32">
+    <section className="bg-primary py-20 lg:py-32">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-16">
           {/* Process Visual */}
-          <div className="flex justify-center">
+          {/* <div className="flex justify-center">
             <div className="w-80 h-80 relative">
               <div className="absolute inset-0 rounded-full border-4 border-white/30"></div>
               <div className="absolute inset-8 rounded-full border-2 border-white/20"></div>
@@ -318,23 +342,23 @@ function OurProcessSection() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Content */}
-          <div>
+          {/* <div>
             <p className="text-lg text-white/90 mb-8 leading-relaxed">
               The construction industry in Malawi is evolving, and we stay ahead by continuously
               refining our processes. Our integrated approach combines proven methodologies with
               modern technologies to deliver exceptional results for our clients across the Central Region.
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Process Items */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8">
           {processItems.map((item, index) => (
             <div key={index} className="text-center">
-              <div className="bg-white/10 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+              <div className="bg-secondary rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                 {item.icon}
               </div>
               <h3 className="text-xl font-medium text-white mb-2">{item.title}</h3>
@@ -346,295 +370,225 @@ function OurProcessSection() {
   );
 }
 
-// Featured Project Section Component
-function FeaturedProjectSection() {
-  return (
-    <section className="relative py-20 lg:py-32 overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80"
-          alt="Featured construction project"
-          fill
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-black/50" />
-      </div>
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4">
-        <div className="max-w-3xl">
-          <div className="text-white/80 text-lg mb-4">Featured Project</div>
-          <h2 className="text-4xl lg:text-5xl  text-white mb-8 leading-tight">
-            Modern Residential Complex, Lilongwe
-          </h2>
-          <p className="text-lg lg:text-xl text-white/90 mb-8 leading-relaxed">
-            A stunning residential development featuring modern amenities and sophisticated
-            design. This project showcases our expertise in residential construction and our
-            commitment to creating exceptional living spaces that enhance communities throughout
-            the Central Region of Malawi.
-          </p>
-          <Link
-            href="/projects/residential-complex"
-            className="inline-block bg-white text-orange-600 px-8 py-4  hover:bg-white/90 transition-colors text-lg font-medium"
-          >
-            Learn More
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
 
-// Our Work Section Component
-function OurWorkSection() {
-  const [currentSlide, setCurrentSlide] = useState(0);
 
-  const projects = [
-    {
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80",
-      title: "Commercial Building Complex",
-      description: "Modern commercial facility in Lilongwe"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?auto=format&fit=crop&w=800&q=80",
-      title: "Residential Development",
-      description: "Quality housing project"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1465101178521-c1a4c8a0a8b7?auto=format&fit=crop&w=800&q=80",
-      title: "Office Building",
-      description: "Contemporary workspace design"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1508921912186-1d1a45ebb3c1?auto=format&fit=crop&w=800&q=80",
-      title: "Industrial Construction",
-      description: "Manufacturing facility project"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80",
-      title: "New Home Construction",
-      description: "Custom residential homes"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1465101178521-c1a4c8a0a8b7?auto=format&fit=crop&w=800&q=80",
-      title: "Mixed-Use Development",
-      description: "Commercial and residential complex"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?auto=format&fit=crop&w=800&q=80",
-      title: "Educational Facility",
-      description: "School construction project"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80",
-      title: "Healthcare Facility",
-      description: "Medical center construction"
-    }
+/* ---------------- Recent Work ---------------- */
+
+
+function WorkSection() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const posts = [
+    { img: "/morden-cladding.jpg", title: "Morden Cladding", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety" },
+    { img: "/window.jpg", title: "Window Replacement", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
+    { img: "/after-construction.jpg", title: "After Construction", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety" },
+    { img: "/welding-fabrication.jpg", title: "Welding Fabrication", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
   ];
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % projects.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + projects.length) % projects.length);
-  };
-
   return (
-    <section className="relative py-20 lg:py-32 overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src="https://hoar.com/wp-content/uploads/2020/01/shutterstock_1027893370-scaled.jpg"
-          alt="Construction background"
-          fill
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-black/90" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Text Content */}
-          <div>
-            <h2 className="text-4xl lg:text-5xl  text-white mb-8 leading-tight">
-              Our Work
-            </h2>
-            <p className="text-lg lg:text-xl text-white/90 mb-8 leading-relaxed">
-              Roy Construction has built a reputation for excellence across Malawi's Central Region.
-              From commercial and residential developments to industrial and institutional facilities,
-              our diverse portfolio demonstrates our commitment to quality construction and innovative
-              building solutions.
-            </p>
-
-          </div>
-
-          {/* Project Carousel */}
-          <div className="bg-white/10 backdrop-blur-sm -lg p-6">
-            <div className="relative aspect-video mb-4  overflow-hidden">
+    <section id="recent" className="py-20 lg:py-28 bg-white">
+      {/* Image Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <button
+              className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              onClick={() => setSelectedImage(null)}
+            >
+              <X size={24} />
+            </button>
+            <div className="relative w-full h-full">
               <Image
-                src={projects[currentSlide].image}
-                alt={projects[currentSlide].title}
+                src={selectedImage}
+                alt="Enlarged view"
                 fill
-                className="object-cover"
+                className="object-contain"
+                priority
               />
             </div>
+          </div>
+        </div>
+      )}
 
-            <h3 className="text-xl font-medium text-white mb-2">
-              {projects[currentSlide].title}
-            </h3>
-            <p className="text-white/80 mb-6">
-              {projects[currentSlide].description}
-            </p>
+      <div className="container mx-auto px-4">
+        <div className="text-left mb-10">
+          <h2 className="text-3xl lg:text-4xl font-bold text-primary">Recent Work</h2>
+          <p className="text-gray-600 max-w-2xl mt-2">Latest completed projects and milestones.</p>
+        </div>
 
-            {/* Navigation */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={prevSlide}
-                  className="bg-white/20 hover:bg-white/30 text-white p-2  transition-colors"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <span className="text-white">
-                  {currentSlide + 1} / {projects.length}
-                </span>
-                <button
-                  onClick={nextSlide}
-                  className="bg-white/20 hover:bg-white/30 text-white p-2  transition-colors"
-                >
-                  <ChevronRight size={20} />
-                </button>
+        <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+          {posts.map((p, i) => (
+            <article key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center"><HardHat size={18} className="text-white" /></div>
+                <div>
+                  <div className="font-medium text-gray-800">{p.location}</div>
+                  <div className="text-sm text-gray-500">{new Date(p.date).toLocaleDateString()}</div>
+                </div>
               </div>
-              <Link
-                href="/work"
-                className="text-white hover:text-white/80 transition-colors"
-              >
-                View All
-              </Link>
+
+              <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(p.img)}><Image src={p.img} alt={p.title} fill className="object-cover" /></div>
+
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-800 mb-2">{p.title}</h3>
+                <p className="text-gray-600 text-sm mb-3">{p.desc}</p>
+                <p className="text-primary text-xs font-mono mb-4">{p.tags}</p>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
+
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+
+      </div>
+    </section>
+  );
+}
+
+
+function ServiceSection() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const posts = [
+    {
+      img: "/perfect-work.jpg", title: " Perfect Work",
+      date: "2025-08-28", location: "Lilongwe Central", desc: "#Roy Construction #2025trends #Proposed 3 bedroom house in Lilongwe",
+      tags: "#proposed #trends #cantilever"
+    },
+
+    { img: "/cantilever.jpg", title: "Cantilever", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
+    { img: "/staircase.jpg", title: "Staircase Design Completion", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety" },
+    { img: "/machinery.jpg", title: "Machinery", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
+  ];
+
+  return (
+    <section id="recent" className="py-20 lg:py-28 bg-white">
+      {/* Image Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <button
+              className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              onClick={() => setSelectedImage(null)}
+            >
+              <X size={24} />
+            </button>
+            <div className="relative w-full h-full">
+              <Image
+                src={selectedImage}
+                alt="Enlarged view"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
         </div>
+      )}
+
+      <div className="container mx-auto px-4">
+        <div className="text-left mb-10">
+          <h2 className="text-3xl lg:text-4xl font-bold text-primary">Services</h2>
+          <p className="text-gray-600 max-w-2xl mt-2">Check Out What We Can Work On.</p>
+        </div>
+
+        <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+          {posts.map((p, i) => (
+            <article key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center"><HardHat size={18} className="text-white" /></div>
+                <div>
+                  <div className="font-medium text-gray-800">Roy Construction</div>
+                  <div className="text-sm text-gray-500">{new Date(p.date).toLocaleDateString()} • {p.location}</div>
+                </div>
+              </div>
+
+              <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(p.img)}><Image src={p.img} alt={p.title} fill className="object-cover" /></div>
+
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-800 mb-2">{p.title}</h3>
+                <p className="text-gray-600 text-sm mb-3">{p.desc}</p>
+                <p className="text-primary text-xs font-mono mb-4">{p.tags}</p>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
+                  <a href="#" className="text-sm text-gray-600 hover:text-primary">Share</a>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+
       </div>
     </section>
   );
 }
 
-// Resources Section Component
-function ResourcesSection() {
-  const resources = [
-    {
-      image: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/3b5d1d5b-b5da-43cd-a603-1a79088e9254-hoar-com/assets/images/Blog-pic-for-safety-week-768x512-12.png",
-      title: "Construction Safety in Malawi: Best Practices",
-      description: "Learn about our comprehensive safety programs and initiatives that keep our teams safe on every project throughout the Central Region."
-    },
-    {
-      image: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/3b5d1d5b-b5da-43cd-a603-1a79088e9254-hoar-com/assets/images/MeetOurExperts_PapeFall2024_BlogImage-768x512-13.jpg",
-      title: "Meet Our Local Construction Experts",
-      description: "Get to know the experienced Malawian professionals who lead our projects and drive innovation in local construction."
-    }
-  ];
+
+
+function ContactCTASection() {
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Form submitted:', formData);
+  };
 
   return (
-    <section className="py-20 lg:py-32 bg-gray-50">
+    <section id="get-quote" className="py-20 lg:py-28 ">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl lg:text-5xl  text-gray-800 mb-4">
-            Projects
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Stay informed with the latest insights, news, and expertise from our construction team in Malawi
+        <div className="max-w-2xl">
+          <h3 className="text-3xl font-semibold mb-4 text-primary">Request a Quote</h3>
+          <p className="mb-8 text-[color:rgba(0,0,0,0.7)]">
+            Tell us about your project and we’ll get back to you shortly.
           </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
-          {resources.map((resource, index) => (
-            <div key={index} className="bg-white -lg overflow-hidden shadow-sm transition-shadow">
-              <div className="relative aspect-video">
-                <Image
-                  src={resource.image}
-                  alt={resource.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-medium text-gray-800 mb-3 leading-tight">
-                  {resource.title}
-                </h3>
-                <p className="text-gray-600 mb-4 leading-relaxed">
-                  {resource.description}
-                </p>
-                <Link
-                  href="/resources"
-                  className="inline-block text-orange-600 hover:text-orange-700 transition-colors font-medium"
-                >
-                  Read More →
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-// Resources Section Component
-function ServiceSection() {
-  const resources = [
-    {
-      image: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/3b5d1d5b-b5da-43cd-a603-1a79088e9254-hoar-com/assets/images/Blog-pic-for-safety-week-768x512-12.png",
-      title: "Construction Safety in Malawi: Best Practices",
-      description: "Learn about our comprehensive safety programs and initiatives that keep our teams safe on every project throughout the Central Region."
-    },
-    {
-      image: "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/test-clones/3b5d1d5b-b5da-43cd-a603-1a79088e9254-hoar-com/assets/images/MeetOurExperts_PapeFall2024_BlogImage-768x512-13.jpg",
-      title: "Meet Our Local Construction Experts",
-      description: "Get to know the experienced Malawian professionals who lead our projects and drive innovation in local construction."
-    }
-  ];
-
-  return (
-    <section className="py-20 lg:py-32 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl lg:text-5xl  text-gray-800 mb-4">
-            Service
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Stay informed with the latest insights, news, and expertise from our construction team in Malawi
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
-          {resources.map((resource, index) => (
-            <div key={index} className="bg-white -lg overflow-hidden shadow-sm transition-shadow">
-              <div className="relative aspect-video">
-                <Image
-                  src={resource.image}
-                  alt={resource.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-medium text-gray-800 mb-3 leading-tight">
-                  {resource.title}
-                </h3>
-                <p className="text-gray-600 mb-4 leading-relaxed">
-                  {resource.description}
-                </p>
-                <Link
-                  href="/resources"
-                  className="inline-block text-orange-600 hover:text-orange-700 transition-colors font-medium"
-                >
-                  Read More →
-                </Link>
-              </div>
-            </div>
-          ))}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              name="name"
+              placeholder="Your Name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:border-[color:rgba(0,0,0,0.35)]"
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Your Email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:border-[color:rgba(0,0,0,0.35)]"
+              required
+            />
+            <textarea
+              name="message"
+              placeholder="Your Message"
+              value={formData.message}
+              onChange={handleInputChange}
+              rows={4}
+              className="w-full bg-white border border-[color:rgba(0,0,0,0.15)] px-4 py-3 text-[color:rgba(0,0,0,0.8)] placeholder-[color:rgba(0,0,0,0.5)] focus:outline-none focus:border-[color:rgba(0,0,0,0.35)] resize-none"
+              required
+            />
+            <button
+              type="submit"
+              className="w-full bg-primary text-white px-6 py-3 hover:bg-primary/90 transition-colors font-medium"
+            >
+              Send Message
+            </button>
+          </form>
         </div>
       </div>
     </section>
@@ -643,39 +597,12 @@ function ServiceSection() {
 
 // Footer Section Component
 function FooterSection() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    message: ''
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
-  };
-
   return (
-    <footer className="bg-orange-600 text-white">
+    <footer className="bg-primary text-white">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid lg:grid-cols-3 gap-12">
+        <div className="grid lg:grid-cols-1 gap-12">
           {/* Company Info */}
           <div>
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold">ROY CONSTRUCTION</h3>
-            </div>
-            <p className="text-white/80 mb-6 leading-relaxed">
-              Roy Construction is your trusted partner for quality construction services in Malawi.
-              We specialize in general construction, building design and planning, and construction
-              management across the Central Region.
-            </p>
             <div className="flex space-x-4">
               <Link href="#" className="text-white/60 hover:text-white transition-colors">
                 <Facebook size={24} />
@@ -693,22 +620,6 @@ function FooterSection() {
                 <Youtube size={24} />
               </Link>
             </div>
-          </div>
-
-          {/* Our Services & Contact */}
-          <div>
-            <h3 className="text-xl font-medium mb-6">Our Services</h3>
-            <div className="space-y-3 text-white/80 text-sm">
-              <div>• General Construction</div>
-              <div>• Building Design and Planning</div>
-              <div>• Construction Management</div>
-              <div>• New Home Construction</div>
-              <div>• Commercial Construction</div>
-              <div>• Industrial Construction</div>
-              <div>• Project Management</div>
-              <div>• Quality Control</div>
-            </div>
-
             <div className="mt-8">
               <h4 className="font-medium text-white mb-4">Contact Information</h4>
               <div className="text-white/80 text-sm space-y-2">
@@ -727,50 +638,10 @@ function FooterSection() {
               </div>
             </div>
           </div>
-
-          {/* Contact Form */}
-          <div>
-            <h3 className="text-xl font-medium mb-6">Get In Touch</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="text"
-                name="name"
-                placeholder="Your Name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full bg-white/10 border border-white/20  px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:border-white/40"
-                required
-              />
-              <input
-                type="email"
-                name="email"
-                placeholder="Your Email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="w-full bg-white/10 border border-white/20  px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:border-white/40"
-                required
-              />
-              <textarea
-                name="message"
-                placeholder="Your Message"
-                value={formData.message}
-                onChange={handleInputChange}
-                rows={4}
-                className="w-full bg-white/10 border border-white/20  px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:border-white/40 resize-none"
-                required
-              />
-              <button
-                type="submit"
-                className="w-full bg-white text-orange-600 px-6 py-3  hover:bg-white/90 transition-colors font-medium"
-              >
-                Send Message
-              </button>
-            </form>
-          </div>
         </div>
 
         {/* Bottom Footer */}
-        <div className="border-t border-white/20 mt-12 pt-8 text-center">
+        <div className="border-t border-white/20 mt-12 pt-8">
           <p className="text-white/60 text-sm">
             © {new Date().getFullYear()} Roy Construction. All rights reserved.
           </p>
