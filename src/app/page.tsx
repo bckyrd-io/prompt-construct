@@ -177,9 +177,6 @@ function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
 
-
-
-
   return (
     <section className="relative h-screen overflow-hidden">
       {/* Video Background */}
@@ -237,7 +234,7 @@ function Hero3Section() {
       <div className="relative z-10 h-full flex items-center justify-left text-left">
         <div className="max-w-4xl  px-12">
           <h1 className="text-5xl lg:text-7xl  text-white mb-8 leading-tight">
-            MORDERN GATE <br /> ON SALE
+            METAL WORKS <br /> IN PROGRESS 
           </h1>
 
         </div>
