@@ -1,11 +1,13 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createPage, updatePage, deletePage } from "@/app/actions";
 
-export default function EditPage({ params }: { params: { id: string } }) {
+export default function EditPage() {
+    const params = useParams<{ id: string }>();
+    const contentId = params?.id || '';
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [location, setLocation] = useState("");
@@ -22,16 +24,24 @@ export default function EditPage({ params }: { params: { id: string } }) {
         const loadContent = async () => {
             try {
                 setIsLoading(true);
-                
-                if (params.id !== "new") {
+
+                if (contentId !== "new") {
                     // Since we don't have a getter function, we'll just set some default values
                     // In a real app, you would fetch the content here
                     setTitle('');
                     setDescription('');
                     setGroup('');
                     setPreviewUrl(null);
+                } else {
+                    // Initialize empty form for new content
+                    setTitle('');
+                    setDescription('');
+                    setLocation('');
+                    setDate('');
+                    setGroup('');
+                    setFile(null);
+                    setPreviewUrl(null);
                 }
-                
             } catch (error) {
                 console.error("Error loading content:", error);
                 setMessage("Failed to load content. Please try again.");
@@ -41,60 +51,76 @@ export default function EditPage({ params }: { params: { id: string } }) {
         };
 
         loadContent();
-    }, [params.id]);
+    }, [contentId]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
-            // For now, just create a preview URL
-            // In a real app, you would upload the file to a storage service
-            // and get back a URL to store in the database
+            // Check if the file is an image or video
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
+            
+            if (!validTypes.includes(selectedFile.type)) {
+                setMessage('Please select a valid image (JPEG, PNG, GIF, WebP) or video (MP4, WebM, QuickTime) file');
+                return;
+            }
+
+            setFile(selectedFile);
             const fileUrl = URL.createObjectURL(selectedFile);
             setPreviewUrl(fileUrl);
             
-            // In a real implementation, you would upload the file here
-            // and update the previewUrl with the actual URL from the storage service
+            // Clear any previous error messages
+            if (message.includes('valid image')) {
+                setMessage('');
+            }
         }
     }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        
+
         try {
             setIsLoading(true);
-            
-            const contentData = {
-                title,
-                slug: title.toLowerCase().replace(/\s+/g, '-'),
-                content: description,
-                category: group,
-                imageUrl: previewUrl || undefined,
-                metadata: {}
-            };
 
-            if (params.id === 'new') {
-                const formData = new FormData();
-                formData.append('title', contentData.title);
-                formData.append('content', contentData.content);
-                formData.append('category', contentData.category);
-                if (contentData.imageUrl) {
-                    formData.append('imageUrl', contentData.imageUrl);
-                }
-                
+            // Create form data with proper type assertions
+            const formData = new FormData();
+
+            // Add required fields with type safety
+            if (title) formData.append('title', title);
+            if (description) formData.append('content', description);
+            if (group) formData.append('category', group);
+
+            // Handle file upload if a file is selected
+            if (file) {
+                // In a real app, you would upload the file to a storage service here
+                // and get back a URL to store in the database
+                // For now, we'll just use a placeholder
+                formData.append('imageUrl', 'placeholder-image-url.jpg');
+            } else if (previewUrl) {
+                // If there's a preview URL but no file, it means we're keeping the existing image
+                formData.append('imageUrl', previewUrl);
+            }
+
+            // Add ID for updates - ensure contentId is a string
+            if (contentId !== 'new' && contentId) {
+                formData.append('id', contentId.toString());
+            }
+
+            if (contentId === 'new') {
                 await createPage(formData);
                 setMessage("Content created successfully!");
                 setTimeout(() => router.push("/admin"), 1500);
-            } else {
-                // For update, we'll just use the ID from the URL
-                const formData = new FormData();
-                formData.append('id', params.id);
-                formData.append('title', contentData.title);
-                formData.append('content', contentData.content);
-                formData.append('category', contentData.category);
-                if (contentData.imageUrl) {
-                    formData.append('imageUrl', contentData.imageUrl);
-                }
-                
+            } else if (contentId) {
+                // Ensure contentId is a string before appending
+                const id = contentId.toString();
+                formData.append('id', id);
                 await updatePage(formData);
                 setMessage("Content updated successfully!");
             }
@@ -108,9 +134,9 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
     async function handleDelete() {
         if (params.id === "new") return;
-        
+
         if (!confirm("Are you sure you want to delete this content?")) return;
-        
+
         try {
             setIsLoading(true);
             const formData = new FormData();
@@ -146,22 +172,18 @@ export default function EditPage({ params }: { params: { id: string } }) {
                         <ArrowLeft size={20} />
                         <span className="hidden sm:inline">Back</span>
                     </button>
-                    <h1 className="text-xl font-bold ml-4">
-                        {params.id === "new" ? "Create New Content" : "Edit Content"}
-                    </h1>
                 </div>
-                
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {message && (
-                        <div className={`p-3 rounded ${
-                            message.includes("success") 
-                                ? "bg-green-100 text-green-700" 
+                        <div className={`p-3 rounded ${message.includes("success")
+                                ? "bg-green-100 text-green-700"
                                 : "bg-red-100 text-red-700"
-                        }`}>
+                            }`}>
                             {message}
                         </div>
                     )}
-                    
+
                     <div className="space-y-1">
                         <label className="block text-sm font-medium text-gray-700">
                             Title <span className="text-red-500">*</span>
@@ -175,7 +197,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                             disabled={isLoading}
                         />
                     </div>
-                    
+
                     <div className="space-y-1">
                         <label className="block text-sm font-medium text-gray-700">
                             Description <span className="text-red-500">*</span>
@@ -189,7 +211,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                             disabled={isLoading}
                         />
                     </div>
-                    
+
                     <div className="space-y-1">
                         <label className="block text-sm font-medium text-gray-700">
                             Media
@@ -197,16 +219,17 @@ export default function EditPage({ params }: { params: { id: string } }) {
                         <div className="mt-1">
                             <label className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary inline-block">
                                 Choose File
-                                <input 
-                                    type="file" 
-                                    className="sr-only" 
+                                <input
+                                    type="file"
+                                    className="sr-only"
                                     onChange={handleMediaChange}
                                     disabled={isLoading}
                                     accept="image/*,video/*"
+                                    multiple={false}
                                 />
                             </label>
                             <span className="ml-3 text-sm text-gray-500">
-                                {file ? file.name : (params.id === "new" ? "No file chosen" : "No file selected")}
+                                {file ? file.name : (contentId === "new" ? "No file chosen" : "No file selected")}
                             </span>
                             {previewUrl && (
                                 <div className="mt-2">
@@ -219,7 +242,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                             )}
                         </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1">
                             <label className="block text-sm font-medium text-gray-700">
@@ -233,7 +256,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                                 disabled={isLoading}
                             />
                         </div>
-                        
+
                         <div className="space-y-1">
                             <label className="block text-sm font-medium text-gray-700">
                                 Date
@@ -247,7 +270,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                             />
                         </div>
                     </div>
-                    
+
                     <div className="space-y-1">
                         <label className="block text-sm font-medium text-gray-700">
                             Content Group <span className="text-red-500">*</span>
@@ -268,7 +291,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
                             <option value="contact">Contact</option>
                         </select>
                     </div>
-                    
+
                     <div className="flex flex-col space-y-4">
                         <button
                             type="submit"
@@ -281,16 +304,16 @@ export default function EditPage({ params }: { params: { id: string } }) {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    {params.id === "new" ? "Creating..." : "Saving..."}
+                                    {contentId === "new" ? "Creating..." : "Saving..."}
                                 </>
-                            ) : params.id === "new" ? (
+                            ) : contentId === "new" ? (
                                 "Create Content"
                             ) : (
                                 "Save Changes"
                             )}
                         </button>
-                        
-                        {params.id !== "new" && (
+
+                        {contentId !== "new" && (
                             <button
                                 type="button"
                                 onClick={handleDelete}

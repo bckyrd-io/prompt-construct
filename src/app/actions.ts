@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { 
   getContentBySlug,
-  getContents,
+  getContents as dbGetContents,
   createContent,
   updateContent,
   deleteContent,
@@ -19,51 +19,32 @@ import {
 import { eq } from 'drizzle-orm';
 import { compare, hash } from 'bcryptjs';
 
-// Session management (in a production app, use a proper session store like Redis)
-let adminSession: { id: number; username: string; role: string } | null = null;
+// Simple in-memory session storage for development
+// In a production app, use a proper session store or JWT with HTTP-only cookies
+
+// Simple session storage key
+const SESSION_KEY = 'admin-session';
 
 // Authentication functions
 export async function loginAction(formData: FormData) {
+  const username = formData.get('username') as string;
+  const password = formData.get('password') as string;
+  
   try {
-    const username = formData.get('username') as string;
-    const password = formData.get('password') as string;
-
-    if (!username || !password) {
-      return { success: false, message: 'Username and password are required' };
-    }
-
-    // Check database for user
-    const [user] = await db.select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-
+    const user = await getUserByUsername(username);
+    
     if (!user) {
-      return { success: false, message: 'Invalid credentials' };
+      return { success: false, message: 'Invalid username or password' };
     }
-
-    // Verify password
+    
     const isPasswordValid = await compare(password, user.password);
+    
     if (!isPasswordValid) {
-      return { success: false, message: 'Invalid credentials' };
+      return { success: false, message: 'Invalid username or password' };
     }
-
-    // Create session
-    adminSession = {
-      id: user.id,
-      username: user.username,
-      role: user.role || 'editor'
-    };
-
-    return { 
-      success: true, 
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
-    };
+    
+    // Authentication successful
+    return { success: true };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, message: 'An error occurred during login' };
@@ -71,7 +52,21 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function getSession() {
-  return adminSession;
+  if (typeof window === 'undefined') return null;
+  
+  const sessionStr = localStorage.getItem(SESSION_KEY);
+  if (!sessionStr) return null;
+
+  try {
+    const session = JSON.parse(sessionStr);
+    if (session.expiresAt < Date.now()) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session as { userId: string; role: string; email: string; expiresAt: number };
+  } catch (error) {
+    return null;
+  }
 }
 
 export async function requireAuth(requiredRole: string = 'editor') {
@@ -94,7 +89,9 @@ export async function requireAuth(requiredRole: string = 'editor') {
 }
 
 export async function logoutAction() {
-  adminSession = null;
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(SESSION_KEY);
+  }
   redirect('/login');
 }
 
@@ -113,29 +110,28 @@ export async function createPage(formData: FormData) {
     await requireAuth();
     
     const title = formData.get('title')?.toString() || '';
-    const slug = formData.get('slug')?.toString() || '';
     const content = formData.get('content')?.toString() || '';
     const category = formData.get('category')?.toString() || 'page';
-    const excerpt = formData.get('excerpt')?.toString() || undefined;
     const imageUrl = formData.get('imageUrl')?.toString() || undefined;
     
-    if (!title || !slug || !content) {
-      throw new Error('Title, slug, and content are required');
+    if (!title || !content) {
+      throw new Error('Title and content are required');
     }
+    
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     
     const contentData: Omit<NewContent, 'id' | 'createdAt' | 'updatedAt' | 'publishedAt' | 'isPublished'> = {
       title,
       slug,
       content,
       category,
-      ...(excerpt && { excerpt }),
       ...(imageUrl && { imageUrl }),
       metadata: {}
     };
 
     await createContent(contentData);
     revalidatePath('/admin');
-    revalidatePath(`/${contentData.slug}`);
+    revalidatePath(`/${slug}`);
     return { success: true };
   } catch (error) {
     console.error('Error creating content:', error);
@@ -149,15 +145,16 @@ export async function updatePage(formData: FormData) {
     
     const id = parseInt(formData.get('id')?.toString() || '0');
     const title = formData.get('title')?.toString() || '';
-    const slug = formData.get('slug')?.toString() || '';
     const content = formData.get('content')?.toString() || '';
     const category = formData.get('category')?.toString() || 'page';
     const excerpt = formData.get('excerpt')?.toString() || undefined;
     const imageUrl = formData.get('imageUrl')?.toString() || undefined;
     
-    if (!id || !title || !slug || !content) {
-      throw new Error('ID, title, slug, and content are required');
+    if (!id || !title || !content) {
+      throw new Error('ID, title, and content are required');
     }
+    
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     
     const updates = {
       title,
@@ -179,6 +176,28 @@ export async function updatePage(formData: FormData) {
       success: false, 
       message: error instanceof Error ? error.message : 'Failed to update content' 
     };
+  }
+}
+
+interface ContentItem {
+  id: number;
+  title: string;
+  slug: string;
+}
+
+export async function getContents(): Promise<{ success: boolean; data?: ContentItem[]; message?: string }> {
+  try {
+    const dbContents = await dbGetContents();
+    const contents: ContentItem[] = dbContents.map((content: any) => ({
+      id: content.id,
+      title: content.title,
+      slug: content.slug
+    }));
+    
+    return { success: true, data: contents };
+  } catch (error) {
+    console.error('Error fetching contents:', error);
+    return { success: false, message: 'Failed to fetch contents' };
   }
 }
 
@@ -253,22 +272,11 @@ export async function registerAction(formData: FormData) {
       .returning();
 
     // Log the user in automatically after registration
-    if (newUser) {
-      adminSession = {
-        id: newUser.id,
-        username: newUser.username,
-        role: newUser.role || 'editor'
-      };
-    }
-
-    return { 
-      success: true,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        role: newUser.role
-      }
+    // Set session in localStorage
+    const session = {
+      id: newUser.id,
+      username: newUser.username,
+      role: newUser.role || 'editor',
     };
   } catch (error) {
     console.error('Registration error:', error);

@@ -1,37 +1,47 @@
 "use client";
+'use client';
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, GripVertical } from "lucide-react";
+import { User } from "lucide-react";
+import { getContents } from "@/app/actions";
+
+interface ContentItem {
+  id: number;
+  title: string;
+  slug: string;
+}
 
 export default function AdminPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-  const [editableContents, setEditableContents] = useState([
-    { id: 1, title: "Homepage Hero Text" },
-    { id: 2, title: "About Section" },
-    { id: 3, title: "Contact Info" }
-  ]);
+  const [contents, setContents] = useState<ContentItem[]>([]);
 
   useEffect(() => {
     // Only run on client-side
     if (typeof window === 'undefined') return;
     
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const auth = localStorage.getItem("auth");
       if (auth === "true") {
         setAuthenticated(true);
+        try {
+          // Fetch contents using server action
+          const result = await getContents();
+          if (result.success && result.data) {
+            setContents(result.data);
+          }
+        } catch (error) {
+          console.error("Error fetching pages:", error);
+        }
       } else {
-        // Use replace instead of push to prevent adding to history
         router.replace("/login");
       }
       setIsLoading(false);
     };
 
-    // Add a small delay to ensure auth state is properly set
     const timer = setTimeout(checkAuth, 100);
-    
-    // Clean up the timer if the component unmounts
     return () => clearTimeout(timer);
   }, [router]);
 
@@ -60,10 +70,12 @@ export default function AdminPage() {
     const dragIndex = Number(e.dataTransfer.getData("text/plain"));
     if (dragIndex === idx) return;
     
-    const items = [...editableContents];
-    const [dragged] = items.splice(dragIndex, 1);
-    items.splice(idx, 0, dragged);
-    setEditableContents(items);
+    const newContents = [...contents];
+    const [dragged] = newContents.splice(dragIndex, 1);
+    newContents.splice(idx, 0, dragged);
+    setContents(newContents);
+    
+ 
   }
   
   function handleDragOver(e: React.DragEvent<HTMLLIElement>) {
@@ -84,32 +96,41 @@ export default function AdminPage() {
           </button>
         </div>
         <ul className="mb-8">
-          {editableContents.map((content, idx) => (
-            <li
-              key={content.id}
-              className="flex justify-between items-center py-2 border-b cursor-move"
-              draggable
-              onDragStart={e => handleDragStart(e, idx)}
-              onDrop={e => handleDrop(e, idx)}
-              onDragOver={handleDragOver}
-            >
-              <span className="flex items-center gap-2">
-                <GripVertical size={18} className="text-gray-400" />
-                {content.title}
-              </span>
-              <a href="/edit" className="border border-primary text-primary px-3 py-1 rounded hover:bg-secondary hover:text-white text-sm">
-                Edit
-              </a>
+          {contents.length > 0 ? (
+            contents.map((content, idx) => (
+              <li
+                key={content.id}
+                className="flex justify-between items-center py-2 border-b cursor-move"
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragOver={handleDragOver}
+              >
+                <span className="flex items-center gap-2">
+                  {content.title}
+                </span>
+                <a 
+                  href={`/admin/${content.id}`}
+                  className="border border-primary text-primary px-3 py-1 rounded hover:bg-secondary hover:text-white text-sm"
+                >
+                  Edit
+                </a>
+              </li>
+            ))
+          ) : (
+            <li className="py-4 text-center text-gray-500">
+              Empty
             </li>
-          ))}
+          )}
         </ul>
         <a 
-          href="/edit" 
+          href="/admin/new" 
           className="block w-full bg-primary text-white px-4 py-2 rounded text-center font-semibold hover:bg-primary/90"
         >
-          Go to Upload & Edit Forms
+          Create New Content
         </a>
       </div>
     </div>
   );
 }
+
