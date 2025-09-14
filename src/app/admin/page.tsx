@@ -5,6 +5,7 @@ import { User, GripVertical } from "lucide-react";
 
 export default function AdminPage() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [editableContents, setEditableContents] = useState([
     { id: 1, title: "Homepage Hero Text" },
@@ -13,17 +14,41 @@ export default function AdminPage() {
   ]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    // Only run on client-side
+    if (typeof window === 'undefined') return;
+    
+    const checkAuth = () => {
       const auth = localStorage.getItem("auth");
       if (auth === "true") {
         setAuthenticated(true);
       } else {
-        router.push("/");
+        // Use replace instead of push to prevent adding to history
+        router.replace("/login");
       }
-    }
+      setIsLoading(false);
+    };
+
+    // Add a small delay to ensure auth state is properly set
+    const timer = setTimeout(checkAuth, 100);
+    
+    // Clean up the timer if the component unmounts
+    return () => clearTimeout(timer);
   }, [router]);
 
-  if (!authenticated) return null;
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated, we'll redirect in the useEffect
+  // This prevents flash of content before redirect
+  if (!authenticated) {
+    return null;
+  }
 
   // Drag and drop handlers
   function handleDragStart(e: React.DragEvent<HTMLLIElement>, idx: number) {
