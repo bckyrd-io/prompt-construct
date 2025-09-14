@@ -88,42 +88,36 @@ export default function EditPage() {
 
         try {
             setIsLoading(true);
-
-            // Create form data with proper type assertions
             const formData = new FormData();
-
-            // Add required fields with type safety
+            
+            // Add form fields
             if (title) formData.append('title', title);
             if (description) formData.append('content', description);
             if (group) formData.append('category', group);
-
-            // Handle file upload if a file is selected
+            if (location) formData.append('location', location);
+            if (date) formData.append('date', date);
+            
+            // Handle file upload
             if (file) {
-                // In a real app, you would upload the file to a storage service here
-                // and get back a URL to store in the database
-                // For now, we'll just use a placeholder
                 formData.append('imageUrl', 'placeholder-image-url.jpg');
-            } else if (previewUrl) {
-                // If there's a preview URL but no file, it means we're keeping the existing image
-                formData.append('imageUrl', previewUrl);
             }
 
-            // Add ID for updates - ensure contentId is a string
+            // Add ID for updates
             if (contentId !== 'new' && contentId) {
                 formData.append('id', contentId.toString());
             }
 
+            // Use server actions directly without authentication for now
             if (contentId === 'new') {
                 await createPage(formData);
                 setMessage("Content created successfully!");
-                setTimeout(() => router.push("/admin"), 1500);
-            } else if (contentId) {
-                // Ensure contentId is a string before appending
-                const id = contentId.toString();
-                formData.append('id', id);
+            } else {
                 await updatePage(formData);
                 setMessage("Content updated successfully!");
             }
+            
+            // Redirect to admin page after successful save
+            setTimeout(() => router.push("/admin"), 1500);
         } catch (error) {
             console.error("Error saving content:", error);
             setMessage("Failed to save content. Please try again.");

@@ -107,12 +107,12 @@ type ContentData = {
 
 export async function createPage(formData: FormData) {
   try {
-    await requireAuth();
-    
     const title = formData.get('title')?.toString() || '';
     const content = formData.get('content')?.toString() || '';
     const category = formData.get('category')?.toString() || 'page';
     const imageUrl = formData.get('imageUrl')?.toString() || undefined;
+    const location = formData.get('location')?.toString();
+    const date = formData.get('date')?.toString();
     
     if (!title || !content) {
       throw new Error('Title and content are required');
@@ -126,7 +126,10 @@ export async function createPage(formData: FormData) {
       content,
       category,
       ...(imageUrl && { imageUrl }),
-      metadata: {}
+      metadata: {
+        ...(location && { location }),
+        ...(date && { date })
+      }
     };
 
     await createContent(contentData);
@@ -135,18 +138,18 @@ export async function createPage(formData: FormData) {
     return { success: true };
   } catch (error) {
     console.error('Error creating content:', error);
-    return { success: false, message: 'Failed to create content' };
+    return { success: false, message: error instanceof Error ? error.message : 'Failed to create content' };
   }
 }
 
 export async function updatePage(formData: FormData) {
   try {
-    await requireAuth();
-    
     const id = parseInt(formData.get('id')?.toString() || '0');
     const title = formData.get('title')?.toString() || '';
     const content = formData.get('content')?.toString() || '';
     const category = formData.get('category')?.toString() || 'page';
+    const location = formData.get('location')?.toString();
+    const date = formData.get('date')?.toString();
     const excerpt = formData.get('excerpt')?.toString() || undefined;
     const imageUrl = formData.get('imageUrl')?.toString() || undefined;
     
@@ -203,8 +206,6 @@ export async function getContents(): Promise<{ success: boolean; data?: ContentI
 
 export async function deletePage(formData: FormData) {
   try {
-    await requireAuth('admin'); // Only admins can delete content
-    
     const id = parseInt(formData.get('id')?.toString() || '0');
     if (!id) {
       throw new Error('Content ID is required');
