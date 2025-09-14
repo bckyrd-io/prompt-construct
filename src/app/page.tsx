@@ -28,12 +28,13 @@ import {
   Droplets,
   Wind,
   Hammer,
-  SquareStack
+  SquareStack,
+  Plus
 } from 'lucide-react';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white relative">
       <Header />
       <HeroSection />
       <AboutSection />
@@ -44,6 +45,10 @@ export default function HomePage() {
       <ServiceSection />
       <ContactCTASection />
       <FooterSection />
+      {/* Floating Login Button - improved positioning */}
+      <Link href="/login" className="fixed bottom-8 right-13 z-50 bg-white text-primary rounded-full shadow-lg p-3 hover:bg-primary/90 hover:text-white transition-colors flex items-center justify-center" style={{boxShadow: '0 4px 16px rgba(0,0,0,0.15)'}} aria-label="Login">
+        <Plus size={28} />
+      </Link>
     </div>
   );
 }
@@ -125,10 +130,10 @@ function Header() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-primary/95 backdrop-blur-sm border-t border-white/20">
+          <div className="lg:hidden bg-white/95 text-gray-800 backdrop-blur-sm border-t border-white/20">
             <nav className="py-4 space-y-2">
               <button
-                className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   scrollToSection('services');
@@ -139,13 +144,13 @@ function Header() {
               </button>
               <Link
                 href="/projects"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Projects
               </Link>
               <button
-                className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   scrollToSection('contact');
@@ -595,52 +600,46 @@ function ContactCTASection() {
 // Footer Section Component
 function FooterSection() {
   return (
-    <footer className="bg-primary text-white">
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid lg:grid-cols-1 gap-12">
-          {/* Company Info */}
-          <div>
-            <div className="flex space-x-4">
-              <Link href="#" className="text-white/60 hover:text-white transition-colors">
-                <Facebook size={24} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-white transition-colors">
-                <Twitter size={24} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-white transition-colors">
-                <Linkedin size={24} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-white transition-colors">
-                <Instagram size={24} />
-              </Link>
-              <Link href="#" className="text-white/60 hover:text-white transition-colors">
-                <Youtube size={24} />
-              </Link>
+    <footer className="text-white" style={{ background: 'var(--color-footer-bg)' }}>
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Contact Info */}
+          <div className="text-white/90 text-sm space-y-2 text-left">
+            <div className="flex items-center gap-2">
+              <MapPin size={18} className="flex-shrink-0" />
+              <span>Lilongwe, Bypass Road, Central Region, Malawi</span>
             </div>
-            <div className="mt-8">
-              <h4 className="font-medium text-white mb-4">Contact Information</h4>
-              <div className="text-white/80 text-sm space-y-2">
-                <div className="flex items-start space-x-2">
-                  <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                  <span>Lilongwe, Bypass Road<br />Central Region, Malawi</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone size={16} className="flex-shrink-0" />
-                  <span>+265(0)888481815</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Mail size={16} className="flex-shrink-0" />
-                  <span>info@royconstruction.mw</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <Phone size={18} className="flex-shrink-0" />
+              <span>+265(0)888481815</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Mail size={18} className="flex-shrink-0" />
+              <span>info@royconstruction.mw</span>
             </div>
           </div>
         </div>
-
-        {/* Bottom Footer */}
-        <div className="border-t border-white/20 mt-12 pt-8">
+        {/* Bottom Footer with Social Links */}
+        <div className="border-t border-white/20 mt-12 pt-8 flex flex-col lg:flex-row items-center justify-between text-left gap-4">
+          <div className="flex space-x-4 mb-2 lg:mb-0">
+            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+              <Facebook size={28} />
+            </Link>
+            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+              <Twitter size={28} />
+            </Link>
+            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+              <Linkedin size={28} />
+            </Link>
+            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+              <Instagram size={28} />
+            </Link>
+            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+              <Youtube size={28} />
+            </Link>
+          </div>
           <p className="text-white/60 text-sm">
-            © {new Date().getFullYear()} Roy Construction. All rights reserved.
+            {new Date().getFullYear()} Roy Construction. All rights reserved.
           </p>
         </div>
       </div>
