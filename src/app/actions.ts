@@ -3,18 +3,19 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { 
-  getContentBySlug,
+  getContentById as dbGetContentById,
   getContents as dbGetContents,
-  createContent,
-  updateContent,
-  deleteContent,
+  createContent as dbCreateContent,
+  updateContent as dbUpdateContent,
+  deleteContent as dbDeleteContent,
   getUserByUsername,
   createUser as createUserDb,
   users,
   type Content,
   type NewContent,
   type User,
-  db
+  db,
+  getDb
 } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { compare, hash } from 'bcryptjs';
@@ -95,112 +96,156 @@ export async function logoutAction() {
   redirect('/login');
 }
 
-type ContentData = {
+interface ContentData {
   title: string;
-  slug: string;
   content: string;
-  category: string;
-  excerpt?: string;
-  imageUrl?: string;
+  category?: string;
+  tags?: string[] | null;
+  featuredImage?: string | null;
+  isPublished?: boolean;
   metadata?: Record<string, any>;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
-export async function createPage(formData: FormData) {
+export async function createContentAction(formData: FormData) {
   try {
-    const title = formData.get('title')?.toString() || '';
-    const content = formData.get('content')?.toString() || '';
-    const category = formData.get('category')?.toString() || 'page';
-    const imageUrl = formData.get('imageUrl')?.toString() || undefined;
-    const location = formData.get('location')?.toString();
-    const date = formData.get('date')?.toString();
+    const { title, content, category, featuredImage, isPublished } = Object.fromEntries(formData.entries());
+    // Get all tags from form data and ensure they're strings
+    const tags = formData.getAll('tags').map(tag => String(tag));
     
-    if (!title || !content) {
-      throw new Error('Title and content are required');
-    }
+    const newContent = await dbCreateContent({
+      title: String(title),
+      content: String(content),
+      category: category ? String(category) : undefined,
+      tags: tags,
+      featuredMedia: featuredImage ? String(featuredImage) : null,
+      isPublished: isPublished === 'on' || isPublished === 'true',
+    });
     
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    
-    const contentData: Omit<NewContent, 'id' | 'createdAt' | 'updatedAt' | 'publishedAt' | 'isPublished'> = {
-      title,
-      slug,
-      content,
-      category,
-      ...(imageUrl && { imageUrl }),
-      metadata: {
-        ...(location && { location }),
-        ...(date && { date })
-      }
-    };
-
-    await createContent(contentData);
     revalidatePath('/admin');
-    revalidatePath(`/${slug}`);
-    return { success: true };
+    return { success: true, id: newContent.id };
   } catch (error) {
     console.error('Error creating content:', error);
-    return { success: false, message: error instanceof Error ? error.message : 'Failed to create content' };
+    return { success: false, message: 'Failed to create content' };
   }
 }
 
 export async function updatePage(formData: FormData) {
   try {
-    const id = parseInt(formData.get('id')?.toString() || '0');
-    const title = formData.get('title')?.toString() || '';
-    const content = formData.get('content')?.toString() || '';
-    const category = formData.get('category')?.toString() || 'page';
-    const location = formData.get('location')?.toString();
-    const date = formData.get('date')?.toString();
-    const excerpt = formData.get('excerpt')?.toString() || undefined;
-    const imageUrl = formData.get('imageUrl')?.toString() || undefined;
+    const id = formData.get('id');
+    const title = formData.get('title');
+    const content = formData.get('content');
+    const category = formData.get('category');
+    const tags = formData.get('tags');
+    const isPublished = formData.get('isPublished');
+    const featuredImage = formData.get('featuredImage') as File | null;
     
-    if (!id || !title || !content) {
-      throw new Error('ID, title, and content are required');
+    // For new content (id === '0'), we need to create it first
+    if (id === '0') {
+      const newContent = await dbCreateContent({
+        title: String(title),
+        content: String(content),
+        category: category ? String(category) : null,
+        tags: tags ? JSON.parse(tags as string) : [],
+        featuredMedia: null, // Will be updated after file upload
+        isPublished: isPublished === 'true',
+      });
+      
+      // If there's a file to upload, handle it after creating the content
+      if (featuredImage && featuredImage instanceof File) {
+        // In a real app, you would upload the file to a storage service here
+        // For now, we'll just store the file name
+        const fileName = `${Date.now()}-${featuredImage.name}`;
+        await dbUpdateContent(newContent.id, {
+          featuredMedia: fileName
+        });
+        newContent.featuredMedia = fileName;
+      }
+      
+      revalidatePath('/admin');
+      return { success: true, content: newContent };
     }
     
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    // For existing content
+    const contentId = Number(id);
+    if (isNaN(contentId)) {
+      return { success: false, message: 'Invalid content ID' };
+    }
     
-    const updates = {
-      title,
-      slug,
-      content,
-      category,
-      updatedAt: new Date(),
-      ...(excerpt !== undefined && { excerpt }),
-      ...(imageUrl !== undefined && { imageUrl })
+    // Get all tags from form data (they come as separate entries with the same key)
+    const tagsArray = formData.getAll('tags').map(tag => String(tag));
+    
+    const updateData: any = {
+      title: String(title),
+      content: String(content),
+      category: category ? String(category) : null,
+      tags: tagsArray,
+      isPublished: isPublished === 'true',
     };
-
-    await updateContent(id, updates);
+    
+    // Only update featured media if a new file was uploaded
+    if (featuredImage && featuredImage instanceof File) {
+      // In a real app, you would upload the file to a storage service here
+      // For now, we'll just store the file name
+      const fileName = `${Date.now()}-${featuredImage.name}`;
+      updateData.featuredMedia = fileName;
+    }
+    
+    const updatedContent = await dbUpdateContent(contentId, updateData);
+    
     revalidatePath('/admin');
-    revalidatePath(`/${slug}`);
-    return { success: true };
+    revalidatePath(`/admin/${id}`);
+    
+    return { success: true, content: updatedContent };
   } catch (error) {
     console.error('Error updating content:', error);
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Failed to update content' 
-    };
+    return { success: false, message: 'Failed to update content: ' + (error as Error).message };
   }
 }
 
 interface ContentItem {
   id: number;
   title: string;
-  slug: string;
+  tags?: string[];
 }
 
 export async function getContents(): Promise<{ success: boolean; data?: ContentItem[]; message?: string }> {
   try {
-    const dbContents = await dbGetContents();
-    const contents: ContentItem[] = dbContents.map((content: any) => ({
+    const contents = await dbGetContents();
+    const formattedContents: ContentItem[] = contents.map(content => ({
       id: content.id,
       title: content.title,
-      slug: content.slug
+      ...(content.tags && { tags: content.tags })
     }));
     
-    return { success: true, data: contents };
+    return { success: true, data: formattedContents };
   } catch (error) {
     console.error('Error fetching contents:', error);
     return { success: false, message: 'Failed to fetch contents' };
+  }
+}
+
+export async function getContentById(id: number) {
+  'use server';
+  
+  try {
+    const content = await dbGetContentById(id);
+    if (!content) {
+      return { success: false, message: 'Content not found' };
+    }
+    
+    // Convert Date objects to ISO strings for serialization
+    const serializedContent = {
+      ...content,
+      createdAt: content.createdAt.toISOString(),
+      updatedAt: content.updatedAt ? content.updatedAt.toISOString() : null
+    };
+    
+    return { success: true, data: serializedContent };
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    return { success: false, message: 'Failed to fetch content' };
   }
 }
 
@@ -211,8 +256,10 @@ export async function deletePage(formData: FormData) {
       throw new Error('Content ID is required');
     }
     
-    await deleteContent(id);
+    await dbDeleteContent(id);
     revalidatePath('/admin');
+    revalidatePath(`/admin/${id}`);
+    revalidatePath(`/admin/edit/${id}`);
     return { success: true };
   } catch (error) {
     console.error('Error deleting content:', error);

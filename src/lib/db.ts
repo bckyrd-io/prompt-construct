@@ -1,6 +1,55 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq, desc, sql } from 'drizzle-orm';
+// Import only types from 'pg' to avoid client-side bundling issues
+type Pool = any;
+
+declare global {
+  // This ensures we can access the pool in server components
+  var _pool: Pool | undefined;
+}
+
+// Only import server-side dependencies in server-side code
+let _db: any;
+let pool: Pool;
+
+// This function will be used to get the database instance
+export function getDb() {
+  if (typeof window !== 'undefined') {
+    throw new Error('Database operations can only be performed on the server side');
+  }
+
+  if (!_db) {
+    // Dynamic imports for server-side only
+    const { Pool } = require('pg');
+    const { drizzle } = require('drizzle-orm/node-postgres');
+    
+    if (!global._pool) {
+      const connectionUrl = new URL(process.env.POSTGRES_URL!);
+      const dbName = connectionUrl.pathname.replace(/^\//, '');
+
+      const sslConfig = process.env.NODE_ENV === 'production' ? {
+        ssl: {
+          rejectUnauthorized: false
+        }
+      } : {};
+
+      global._pool = new Pool({
+        host: connectionUrl.hostname,
+        port: parseInt(connectionUrl.port) || 5432,
+        user: connectionUrl.username,
+        password: connectionUrl.password,
+        database: dbName,
+        ...sslConfig
+      });
+    }
+    
+    pool = global._pool;
+    _db = drizzle(pool);
+  }
+  
+  return { db: _db, pool };
+}
+
+// Import schema types
+import { eq, desc, and } from 'drizzle-orm';
 import { 
   pgTable, 
   serial, 
@@ -8,250 +57,222 @@ import {
   timestamp, 
   varchar, 
   boolean,
-  jsonb,
-  pgSchema
+  jsonb
 } from 'drizzle-orm/pg-core';
 import { hash } from 'bcryptjs';
-
-// Check for required environment variables
-if (!process.env.POSTGRES_PRISMA_URL) {
-  throw new Error('POSTGRES_PRISMA_URL environment variable is not set. Please check your .env.local file.');
-}
 
 // Set default admin email/password if not provided
 process.env.ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
 process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
+// Check for required environment variables
+if (!process.env.POSTGRES_URL) {
+  console.warn('POSTGRES_URL environment variable is not set. Database operations will fail.');
+  // Don't throw error here to allow the app to start in development
+}
+
+// ============================================
 // Database Schema
-const contents = pgTable('contents', {
+// ============================================
+
+export const contents = pgTable('contents', {
   id: serial('id').primaryKey(),
-  title: varchar('title', { length: 256 }).notNull(),
-  slug: varchar('slug', { length: 256 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
   content: text('content').notNull(),
-  excerpt: text('excerpt'),
-  imageUrl: text('image_url'),
-  category: varchar('category', { length: 50 }).notNull(), // 'page', 'project', 'service', etc.
-  metadata: jsonb('metadata').default({}), // For additional fields like location, tags, etc.
-  isPublished: boolean('is_published').default(true),
-  publishedAt: timestamp('published_at').defaultNow(),
+  featuredMedia: text('featured_media'),
+  isPublished: boolean('is_published').default(false),
+  publishedAt: timestamp('published_at'),
+  category: varchar('category', { length: 50 }),
+  tags: text('tags').array(),
+  metadata: jsonb('metadata').default({}),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-const users = pgTable('users', {
+export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  username: varchar('username', { length: 256 }).unique().notNull(),
-  password: varchar('password', { length: 256 }).notNull(),
-  email: varchar('email', { length: 256 }).unique(),
-  role: varchar('role', { length: 50 }).default('editor'),
+  username: varchar('username', { length: 50 }).unique().notNull(),
+  email: varchar('email', { length: 255 }).unique().notNull(),
+  password: varchar('password', { length: 255 }).notNull(),
+  role: varchar('role', { length: 20 }).default('editor').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Database Connection with error handling
-// Parse the connection string to extract SSL parameters
-const connectionString = new URL(process.env.POSTGRES_PRISMA_URL || '');
-const sslConfig = process.env.NODE_ENV === 'production' 
-  ? { rejectUnauthorized: true }
-  : { rejectUnauthorized: false }; // Allow self-signed certificates in development
+// ============================================
+// Database Connection
+// ============================================
 
-const pool = new Pool({
-  user: 'postgres.rxsbtzncwoknensfjisg',
-  host: connectionString.hostname,
-  database: 'postgres',
-  password: connectionString.password,
-  port: parseInt(connectionString.port || '5432'),
-  ssl: sslConfig,
-  connectionTimeoutMillis: 10000, // 10 seconds timeout
-  idle_in_transaction_session_timeout: 20000, // 20 seconds
-});
-
-// Test the connection immediately
-async function testConnection() {
-  const client = await pool.connect();
-  try {
-    await client.query('SELECT NOW()');
-    console.log('✅ Database connection successful');
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    throw new Error('Failed to connect to the database. Please check your DATABASE_URL and ensure PostgreSQL is running.');
-  } finally {
-    client.release();
-  }
+// Get the db instance when needed
+function getDatabase() {
+  const { db } = getDb();
+  return db;
 }
 
-// Initialize the database schema
-async function initializeDatabase() {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    
-    // Create users table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(256) UNIQUE NOT NULL,
-        password VARCHAR(256) NOT NULL,
-        email VARCHAR(256) UNIQUE,
-        role VARCHAR(50) DEFAULT 'editor',
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // Create contents table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS contents (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(256) NOT NULL,
-        slug VARCHAR(256) NOT NULL,
-        content TEXT NOT NULL,
-        excerpt TEXT,
-        image_url TEXT,
-        category VARCHAR(50) NOT NULL,
-        metadata JSONB DEFAULT '{}'::jsonb,
-        is_published BOOLEAN DEFAULT true,
-        published_at TIMESTAMP DEFAULT NOW(),
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    await client.query('COMMIT');
-    console.log('✅ Database schema initialized');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('❌ Failed to initialize database:', error);
-    throw error;
-  } finally {
-    client.release();
+export const db = new Proxy({}, {
+  get(_, prop) {
+    const db = getDatabase();
+    return db[prop as keyof typeof db];
   }
-}
+}) as any;
 
-// Initialize the database when this module loads
-(async () => {
-  try {
-    await testConnection();
-    await initializeDatabase();
-    await ensureAdminUser();
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    process.exit(1);
-  }
-})();
+// ============================================
+// Types
+// ============================================
 
+export type Content = typeof contents.$inferSelect;
+export type NewContent = Omit<typeof contents.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>;
+export type User = typeof users.$inferSelect;
+export type NewUser = Omit<typeof users.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>;
 
-// Test the connection when the module loads
-testConnection().catch(console.error);
-
-// Create a schema object for Drizzle
-export const db = drizzle(pool, { 
-  schema: { 
-    contents, 
-    users 
-  } 
-});
-
+// ============================================
 // Content Operations
-export async function getContentBySlug(slug: string, category?: string) {
-  const whereClause = category 
-    ? eq(contents.slug, slug) && eq(contents.category, category)
-    : eq(contents.slug, slug);
-    
-  const result = await db
-    .select()
-    .from(contents)
-    .where(whereClause)
-    .limit(1);
-    
-  return result[0];
+// ============================================
+
+export async function getContentById(id: number, category?: string): Promise<Content | null> {
+  const query = db.select().from(contents).$dynamic();
+  
+  if (category) {
+    query.where(and(eq(contents.id, id), eq(contents.category, category)));
+  } else {
+    query.where(eq(contents.id, id));
+  }
+  
+  const [content] = await query;
+  return content || null;
 }
 
-export async function getContents(category?: string) {
-  const query = db
-    .select()
-    .from(contents);
-    
+export async function getContents(category?: string): Promise<Content[]> {
+  const query = db.select().from(contents).$dynamic();
+  
   if (category) {
     query.where(eq(contents.category, category));
   }
   
-  return await query.orderBy(desc(contents.publishedAt));
+  return query.orderBy(desc(contents.publishedAt));
 }
 
-export async function createContent(data: NewContent) {
-  // Ensure metadata is an object and handle null/undefined for optional fields
-  const insertData = {
-    ...data,
-    excerpt: data.excerpt || null,
-    imageUrl: data.imageUrl || null,
-    metadata: data.metadata || {},
-  };
-  
-  const [newContent] = await db.insert(contents).values(insertData).returning();
-  return newContent;
+export async function createContent(data: NewContent): Promise<Content> {
+  const [content] = await db
+    .insert(contents)
+    .values({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  return content;
 }
 
 export async function updateContent(
-  id: number,
-  updates: {
-    title?: string;
-    slug?: string;
-    content?: string;
-    excerpt?: string;
-    imageUrl?: string;
-    category?: string;
-    metadata?: Record<string, any>;
-    isPublished?: boolean;
-  }
-) {
-  const [updatedContent] = await db
+  id: number, 
+  data: Partial<Omit<NewContent, 'id' | 'createdAt'>>
+): Promise<Content> {
+  const [content] = await db
     .update(contents)
-    .set({ 
-      ...updates,
+    .set({
+      ...data,
       updatedAt: new Date(),
-      ...(updates.metadata && { metadata: { ...updates.metadata } }),
     })
     .where(eq(contents.id, id))
     .returning();
-  return updatedContent;
+  return content;
 }
 
-export async function deleteContent(id: number) {
-  const [deletedContent] = await db.delete(contents).where(eq(contents.id, id)).returning();
-  return deletedContent;
+export async function deleteContent(id: number): Promise<Content | undefined> {
+  const [content] = await db
+    .delete(contents)
+    .where(eq(contents.id, id))
+    .returning();
+  return content;
 }
 
+// ============================================
 // User Operations
-export async function getUserByUsername(username: string) {
-  const [user] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+// ============================================
+
+export async function getUserById(id: number): Promise<User | null> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, id));
+  return user || null;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email));
+  return user || null;
+}
+
+export async function getUserByUsername(username: string): Promise<User | null> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, username));
+  return user || null;
+}
+
+export async function createUser(userData: Omit<NewUser, 'role'>): Promise<User> {
+  const hashedPassword = await hash(userData.password, 10);
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      ...userData,
+      password: hashedPassword,
+      role: 'editor', // Default role
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+
   return user;
 }
 
-export async function createUser(user: { username: string; password: string }) {
-  const [newUser] = await db.insert(users).values(user).returning();
-  return newUser;
-}
+// ============================================
+// Admin User Setup
+// ============================================
 
-export async function ensureAdminUser() {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  
+export async function ensureAdminUser(): Promise<User> {
+  const adminEmail = process.env.ADMIN_EMAIL!;
+  const adminPassword = process.env.ADMIN_PASSWORD!;
+
   try {
     // Check if admin user already exists
-    const existingAdmin = await getUserByUsername(adminEmail);
-    if (existingAdmin) return existingAdmin;
+    let adminUser = await getUserByEmail(adminEmail);
     
-    // Hash the password
-    const hashedPassword = await hash(adminPassword, 10);
+    if (!adminUser) {
+      // Create admin user if it doesn't exist
+      const hashedPassword = await hash(adminPassword, 10);
+      const { db } = getDb();
+      
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username: 'admin',
+          email: adminEmail,
+          password: hashedPassword,
+          role: 'admin',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+      
+      if (!newUser) {
+        throw new Error('Failed to create admin user');
+      }
+      
+      adminUser = newUser;
+      console.log('Admin user created successfully');
+    }
     
-    // Create admin user
-    const [adminUser] = await db.insert(users).values({
-      username: adminEmail,
-      password: hashedPassword
-    }).returning();
+    if (!adminUser) {
+      throw new Error('Admin user not found and could not be created');
+    }
     
-    console.log('Admin user created successfully');
     return adminUser;
   } catch (error) {
     console.error('Error ensuring admin user:', error);
@@ -259,15 +280,77 @@ export async function ensureAdminUser() {
   }
 }
 
-// Types
-export type Content = typeof contents.$inferSelect;
+// Set default admin credentials if not provided in environment
+process.env.ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
+process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
-export interface NewContent extends Omit<typeof contents.$inferInsert, 'excerpt' | 'imageUrl'> {
-  excerpt?: string | null;
-  imageUrl?: string | null;
+// Initialize admin user on startup if no users exist
+async function initializeAdmin() {
+  if (typeof window !== 'undefined') return; // Skip in browser
+  
+  try {
+    const { pool } = getDb();
+    const client = await pool.connect();
+    try {
+      // Check if users table exists and has any users
+      const result = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'users'
+        )
+      `);
+      
+      const usersTableExists = result.rows[0].exists;
+      
+      if (usersTableExists) {
+        const db = getDatabase();
+        const existingUsers = await db.select().from(users).limit(1);
+        if (existingUsers.length === 0) {
+          console.log('No users found. Creating admin user...');
+          await ensureAdminUser();
+        }
+      } else {
+        console.log('Users table does not exist yet. Run migrations first.');
+      }
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error initializing admin user:', error);
+  }
 }
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
 
-// Export the table objects for use in other files
-export { contents, users };
+// Run initialization after a short delay to ensure database is ready
+if (typeof window === 'undefined') {
+  setTimeout(() => {
+    initializeAdmin().catch(console.error);
+  }, 2000);
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+export async function testConnection() {
+  if (typeof window !== 'undefined') {
+    console.log('Database connection test skipped in browser');
+    return;
+  }
+  
+  const { pool } = getDb();
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT NOW()');
+    console.log('✅ Database connection successful');
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Test the connection on startup
+testConnection().catch(console.error);

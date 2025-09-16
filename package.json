@@ -6,10 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint",
-    "db:setup": "tsx scripts/setup-db.ts",
-    "db:init": "tsx scripts/init-db.ts",
-    "db:reset": "npm run db:setup && npm run db:init"
+    "lint": "eslint"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -31,6 +28,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.2.2",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
