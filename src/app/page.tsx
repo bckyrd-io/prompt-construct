@@ -46,7 +46,7 @@ export default function HomePage() {
       <ContactCTASection />
       <FooterSection />
       {/* Floating Login Button - improved positioning */}
-      <Link href="/login" className="fixed bottom-8 right-13 z-50 bg-white text-primary rounded-full shadow-lg p-3 hover:bg-primary/90 hover:text-white transition-colors flex items-center justify-center" style={{boxShadow: '0 4px 16px rgba(0,0,0,0.15)'}} aria-label="Login">
+      <Link href="/login" className="fixed bottom-8 right-13 z-50 bg-white text-primary rounded-full shadow-lg p-3 hover:bg-primary/90 hover:text-white transition-colors flex items-center justify-center" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }} aria-label="Login">
         <Plus size={28} />
       </Link>
     </div>
@@ -180,91 +180,313 @@ function Header() {
 function HeroSection() {
   const [isMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [heroContent, setHeroContent] = useState<{
+    title: string;
+    mediaUrl: string;
+    mediaType: 'video' | 'image';
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchHeroData = async () => {
+      try {
+        const response = await fetch('/api/content?category=hero');
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          const heroItem = result.data[0]; // Get first hero item
+          const mediaUrl = heroItem.featuredMedia ? `/${heroItem.featuredMedia}` : '/gate.mp4';
+          const mediaType = heroItem.featuredMedia?.endsWith('.mp4') || heroItem.featuredMedia?.endsWith('.webm')
+            ? 'video' : 'image';
+          
+          setHeroContent({
+            title: heroItem.title || 'Your Trusted Construction Partner in Malawi',
+            mediaUrl,
+            mediaType
+          });
+        } else {
+          // Fallback to default content
+          setHeroContent({
+            title: 'Your Trusted Construction Partner in Malawi',
+            mediaUrl: '/gate.mp4',
+            mediaType: 'video'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching hero content:', error);
+        // Fallback to default content
+        setHeroContent({
+          title: 'Your Trusted Construction Partner in Malawi',
+          mediaUrl: '/gate.mp4',
+          mediaType: 'video'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHeroData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <section className="relative h-screen overflow-hidden bg-gray-200 flex items-center justify-center">
+        <div className="animate-pulse w-full h-full bg-gray-300"></div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative h-screen overflow-hidden">
-      {/* Video Background */}
-      <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        loop
-        muted={isMuted}
-        playsInline
-      >
-        <source src="/gate.mp4" type="video/mp4" />
-      </video>
+      {/* Media Background */}
+      {heroContent?.mediaType === 'video' ? (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          loop
+          muted={isMuted}
+          playsInline
+        >
+          <source src={heroContent.mediaUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      ) : (
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src={heroContent?.mediaUrl || '/default-hero.jpg'}
+            alt="Hero Background"
+            fill
+            className="object-cover"
+            priority
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/default-hero.jpg';
+            }}
+          />
+        </div>
+      )}
 
-      {/* Overlay - Removed to show videos clearly */}
+      {/* Overlay for better text readability */}
+      <div className="absolute inset-0 bg-black/30"></div>
 
       {/* Content */}
       <div className="relative z-10 h-full flex items-center justify-left text-left">
-        <div className="max-w-4xl  px-12">
-          <h1 className="text-5xl lg:text-7xl  text-white mb-8 leading-tight">
-            CONSTRUCTION
-            PROCESS
+        <div className="max-w-4xl px-4 sm:px-8 lg:px-12">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl text-white mb-8 leading-tight">
+            <span className="bg-gray-800/20">
+              {heroContent?.title || 'Your Trusted Construction Partner in Malawi'}
+            </span>
           </h1>
-
         </div>
       </div>
-
     </section>
   );
 }
-// Hero Section Component
+// Hero Section Component for Metal Works
 function Hero3Section() {
+  const [isMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [heroContent, setHeroContent] = useState<{
+    title: string;
+    mediaUrl: string;
+    mediaType: 'video' | 'image';
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHeroData = async () => {
+      try {
+        const response = await fetch('/api/content?category=metal-works');
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          const heroItem = result.data[0];
+          const mediaUrl = heroItem.featuredMedia ? `/${heroItem.featuredMedia}` : '/metal.mp4';
+          const mediaType = heroItem.featuredMedia?.endsWith('.mp4') || heroItem.featuredMedia?.endsWith('.webm')
+            ? 'video' : 'image';
+          
+          setHeroContent({
+            title: heroItem.title || 'Metal Works in Progress',
+            mediaUrl,
+            mediaType
+          });
+        } else {
+          setHeroContent({
+            title: 'Metal Works in Progress',
+            mediaUrl: '/metal.mp4',
+            mediaType: 'video'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching metal works content:', error);
+        setHeroContent({
+          title: 'Metal Works in Progress',
+          mediaUrl: '/metal.mp4',
+          mediaType: 'video'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHeroData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <section className="relative h-screen overflow-hidden bg-gray-200 flex items-center justify-center">
+        <div className="animate-pulse w-full h-full bg-gray-300"></div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="relative h-screen overflow-hidden">
+      {/* Media Background */}
+      {heroContent?.mediaType === 'video' ? (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          loop
+          muted={isMuted}
+          playsInline
+        >
+          <source src={heroContent.mediaUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      ) : (
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src={heroContent?.mediaUrl || '/metal-fallback.jpg'}
+            alt="Metal Works Background"
+            fill
+            className="object-cover"
+            priority
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/metal-fallback.jpg';
+            }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="relative z-10 h-full flex items-center justify-left text-left">
+        <div className="max-w-4xl px-4 sm:px-8 lg:px-12">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl text-white mb-8 leading-tight">
+            <span className="bg-gray-800/20">
+              {heroContent?.title || ''}
+            </span>
+          </h1>
+        </div>
+      </div>
+    </section>
+  );
+}
+// Hero Section for Construction Projects
+function Hero2Section() {
+  const [heroContent, setHeroContent] = useState<{
+    title: string;
+    mediaUrl: string;
+    mediaType: 'video' | 'image';
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted] = useState(true);
 
+  useEffect(() => {
+    const fetchHeroData = async () => {
+      try {
+        const response = await fetch('/api/content?category=hero2');
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          const heroItem = result.data[0];
+          const mediaUrl = heroItem.featuredMedia ? `/${heroItem.featuredMedia}` : '/dimension.jpg';
+          const mediaType = heroItem.featuredMedia?.endsWith('.mp4') || heroItem.featuredMedia?.endsWith('.webm')
+            ? 'video' : 'image';
+          
+          setHeroContent({
+            title: heroItem.title || '',
+            mediaUrl,
+            mediaType
+          });
+        } else {
+          setHeroContent({
+            title: '',
+            mediaUrl: '/dimension.jpg',
+            mediaType: 'image'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching construction content:', error);
+        setHeroContent({
+          title: '',
+          mediaUrl: '/dimension.jpg',
+          mediaType: 'image'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    fetchHeroData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <section className="relative h-screen overflow-hidden bg-gray-200 flex items-center justify-center">
+        <div className="animate-pulse w-full h-full bg-gray-300"></div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative h-screen overflow-hidden">
-      {/* Video Background */}
-      <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        loop
-        muted={isMuted}
-        playsInline
-      >
-        <source src="/metal.mp4" type="video/mp4" />
-      </video>
+      {/* Media Background */}
+      {heroContent?.mediaType === 'video' ? (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          autoPlay
+          loop
+          muted={isMuted}
+          playsInline
+        >
+          <source src={heroContent.mediaUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      ) : (
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src={heroContent?.mediaUrl || '/dimension.jpg'}
+            alt="Construction Projects Background"
+            fill
+            className="object-cover"
+            priority
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/dimension.jpg';
+            }}
+          />
+        </div>
+      )}
 
-      {/* Overlay - Removed to show videos clearly */}
+      {/* Semi-transparent overlay */}
+      <div className="absolute inset-0 bg-black/30"></div>
 
       {/* Content */}
       <div className="relative z-10 h-full flex items-center justify-left text-left">
-        <div className="max-w-4xl  px-12">
-          <h1 className="text-5xl lg:text-7xl  text-white mb-8 leading-tight">
-            METAL WORKS <br /> IN PROGRESS 
+        <div className="max-w-4xl px-4 sm:px-8 lg:px-12">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl text-white mb-8 leading-tight">
+            <span className="bg-gray-800/20 ">
+              {heroContent?.title || ''}
+            </span>
           </h1>
-
         </div>
       </div>
-
-
-    </section>
-  );
-}
-// Hero Section Component
-function Hero2Section() {
-
-
-
- 
-
-  return (
-    <section className="relative h-screen overflow-hidden">
-      {/* Video Background */}
-      <Image
-        src="/dimension.jpg"
-        alt="Construction professional"
-        fill
-        className="absolute inset-0 w-full h-full object-cover"
-      />
     </section>
   );
 }
@@ -275,21 +497,12 @@ function AboutSection() {
     <section className="relative py-20 lg:py-32 overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
-        {/* <Image
-          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80"
-          alt="Construction professional"
-          fill
-          className="object-cover"
-        /> */}
         <div className="absolute inset-0 bg-light/90" />
       </div>
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4">
         <div className="max-w-3xl">
-          {/* <h2 className="text-4xl lg:text-5xl  text-black mb-8 leading-tight">
-            Your Trusted Construction Partner in Malawi
-          </h2> */}
           <p className="text-lg lg:text-xl text-black/90 mb-8 leading-relaxed">
             Roy Construction is a leading construction company in Malawi, specializing in general construction,
             building design and planning, and construction management. Based in Lilongwe, we serve clients
@@ -332,28 +545,7 @@ function ProcessSection() {
     <section className="bg-primary py-20 lg:py-32">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-16">
-          {/* Process Visual */}
-          {/* <div className="flex justify-center">
-            <div className="w-80 h-80 relative">
-              <div className="absolute inset-0 rounded-full border-4 border-white/30"></div>
-              <div className="absolute inset-8 rounded-full border-2 border-white/20"></div>
-              <div className="absolute inset-16 rounded-full bg-white/10 flex items-center justify-center">
-                <div className="text-white text-center">
-                  <div className="text-2xl font-bold mb-2">OUR</div>
-                  <div className="text-lg">PROCESS</div>
-                </div>
-              </div>
-            </div>
-          </div> */}
-
-          {/* Content */}
-          {/* <div>
-            <p className="text-lg text-white/90 mb-8 leading-relaxed">
-              The construction industry in Malawi is evolving, and we stay ahead by continuously
-              refining our processes. Our integrated approach combines proven methodologies with
-              modern technologies to deliver exceptional results for our clients across the Central Region.
-            </p>
-          </div> */}
+        
         </div>
 
         {/* Process Items */}
@@ -373,19 +565,40 @@ function ProcessSection() {
 }
 
 
-
-
-/* ---------------- Recent Work ---------------- */
-
-
 function WorkSection() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const posts = [
-    { img: "/morden-cladding.jpg", title: "Morden Cladding", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety" },
-    { img: "/window.jpg", title: "Window Replacement", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
-    { img: "/after-construction.jpg", title: "After Construction", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety" },
-    { img: "/welding-fabrication.jpg", title: "Welding Fabrication", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
-  ];
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWorkData = async () => {
+      try {
+        const response = await fetch('/api/content?category=work');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Transform the data to match the expected format
+          const workPosts = result.data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            desc: item.content?.substring(0, 100) + (item.content?.length > 100 ? '...' : '') || 'No description available',
+            img: item.featuredMedia ? `/${item.featuredMedia}` : '/default-project.jpg',
+            location: item.metadata?.location || 'Location not specified',
+            date: item.createdAt || new Date().toISOString(),
+            tags: item.tags?.map((t: string) => `#${t}`).join(' ') || '#construction',
+          }));
+          
+          setPosts(workPosts);
+        }
+      } catch (error) {
+        console.error('Error fetching work data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWorkData();
+  }, []);
 
   return (
     <section id="recent" className="py-20 lg:py-28 bg-white">
@@ -420,6 +633,18 @@ function WorkSection() {
           <h2 className="text-3xl lg:text-4xl font-bold text-primary">Recent Work</h2>
           <p className="text-gray-600 max-w-2xl mt-2">Latest completed projects and milestones.</p>
         </div>
+        
+        {isLoading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        )}
+        
+        {!isLoading && posts.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No work projects found.</p>
+          </div>
+        )}
 
         <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
           {posts.map((p, i) => (
@@ -432,7 +657,18 @@ function WorkSection() {
                 </div>
               </div>
 
-              <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(p.img)}><Image src={p.img} alt={p.title} fill className="object-cover" /></div>
+              <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(p.img)}>
+                <Image 
+                  src={p.img} 
+                  alt={p.title} 
+                  fill 
+                  className="object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/default-project.jpg';
+                  }}
+                />
+              </div>
 
               <div className="p-4">
                 <h3 className="font-semibold text-gray-800 mb-2">{p.title}</h3>
@@ -456,16 +692,50 @@ function WorkSection() {
 
 function ServiceSection() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const posts = [
-    {
-      img: "/perfect-work.jpg", title: " Perfect Work",
-      date: "2025-08-28", location: "Lilongwe Central", desc: "#Roy Construction #2025trends #Proposed 3 bedroom house in Lilongwe",
-      tags: "#proposed #trends #cantilever"
-    },
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    { img: "/cantilever.jpg", title: "Cantilever", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
-    { img: "/staircase.jpg", title: "Staircase Design Completion", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety" },
-    { img: "/machinery.jpg", title: "Machinery", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding" },
+  useEffect(() => {
+    const fetchServiceData = async () => {
+      try {
+        const response = await fetch('/api/content?category=service');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Transform the data to match the expected format
+          const servicePosts = result.data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            desc: item.content?.substring(0, 100) + (item.content?.length > 100 ? '...' : '') || 'No description available',
+            img: item.featuredMedia ? `/${item.featuredMedia}` : '/default-project.jpg',
+            location: item.metadata?.location || 'Location not specified',
+            date: item.createdAt || new Date().toISOString(),
+            tags: item.tags?.map((t: string) => `#${t}`).join(' ') || '#service',
+          }));
+          
+          setPosts(servicePosts);
+        }
+      } catch (error) {
+        console.error('Error fetching service data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchServiceData();
+  }, []);
+
+  // Fallback data if no posts are available
+  const displayPosts = posts.length > 0 ? posts : [
+    {
+      id: 1,
+      img: "/perfect-work.jpg", 
+      title: "Perfect Work",
+      date: new Date().toISOString(),
+      location: "Lilongwe Central",
+      desc: "No services available. Please check back later.",
+      tags: "#service #comingsoon"
+    }
   ];
 
   return (
@@ -501,34 +771,53 @@ function ServiceSection() {
           <h2 className="text-3xl lg:text-4xl font-bold text-primary">Services</h2>
           <p className="text-gray-600 max-w-2xl mt-2">Check Out What We Can Work On.</p>
         </div>
-
-        <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
-          {posts.map((p, i) => (
-            <article key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-              <div className="p-4 flex items-center gap-3 border-b border-gray-100">
-                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center"><HardHat size={18} className="text-white" /></div>
-                <div>
-                  <div className="font-medium text-gray-800">Roy Construction</div>
-                  <div className="text-sm text-gray-500">{new Date(p.date).toLocaleDateString()} • {p.location}</div>
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+            {displayPosts.map((post, index) => (
+              <article key={post.id || index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                    <HardHat size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800">Roy Construction</div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(post.date).toLocaleDateString()} • {post.location}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(p.img)}><Image src={p.img} alt={p.title} fill className="object-cover" /></div>
-
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 mb-2">{p.title}</h3>
-                <p className="text-gray-600 text-sm mb-3">{p.desc}</p>
-                <p className="text-primary text-xs font-mono mb-4">{p.tags}</p>
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
-                  <a href="#" className="text-sm text-gray-600 hover:text-primary">Share</a>
+                <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(post.img)}>
+                  <Image 
+                    src={post.img} 
+                    alt={post.title} 
+                    fill 
+                    className="object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/default-project.jpg';
+                    }}
+                  />
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
 
-
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-800 mb-2">{post.title}</h3>
+                  <p className="text-gray-600 text-sm mb-3">{post.desc}</p>
+                  <p className="text-primary text-xs font-mono mb-4">{post.tags}</p>
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
+                    <a href="#" className="text-sm text-gray-600 hover:text-primary">Share</a>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -600,11 +889,11 @@ function ContactCTASection() {
 // Footer Section Component
 function FooterSection() {
   return (
-    <footer className="text-white" style={{ background: 'var(--color-footer-bg)' }}>
+    <footer className="text-white" style={{ background: 'black' }}>
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Contact Info */}
-          <div className="text-white/90 text-sm space-y-2 text-left">
+          <div className="text-white text-sm space-y-2 text-left">
             <div className="flex items-center gap-2">
               <MapPin size={18} className="flex-shrink-0" />
               <span>Lilongwe, Bypass Road, Central Region, Malawi</span>
@@ -622,23 +911,23 @@ function FooterSection() {
         {/* Bottom Footer with Social Links */}
         <div className="border-t border-white/20 mt-12 pt-8 flex flex-col lg:flex-row items-center justify-between text-left gap-4">
           <div className="flex space-x-4 mb-2 lg:mb-0">
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Facebook size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Twitter size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Linkedin size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Instagram size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Youtube size={28} />
             </Link>
           </div>
-          <p className="text-white/60 text-sm">
+          <p className="text-white text-sm">
             {new Date().getFullYear()} Roy Construction. All rights reserved.
           </p>
         </div>

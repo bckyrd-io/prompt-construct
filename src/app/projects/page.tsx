@@ -1,25 +1,110 @@
-"use client";
+'use client';
 
-import React from "react";
-import Image from "next/image";
+import { getContents } from "@/app/actions";
 import Link from "next/link";
-import { HardHat, Plus} from "lucide-react";
+import { Facebook, HardHat, Instagram, Linkedin, Mail, MapPin, Menu, Phone, Plus, Twitter, X, Youtube } from "lucide-react";
+import { useState, useEffect } from 'react';
 
-// Dummy project data (merge completed, in-progress, service, etc.)
-const allProjects = [
-  // Completed
-  { img: "/after-construction.jpg", title: "After Construction", date: "2025-08-28", location: "Lilongwe Central", desc: "Completed staircase with safety-first design and premium finishes.", tags: "#Staircase #Safety", type: "completed" },
-  { img: "/window.jpg", title: "Window Replacement", date: "2025-08-24", location: "Area 49", desc: "Custom welded slatted gate combining aesthetics and security.", tags: "#Gate #Welding", type: "completed" },
-  // In Progress
-  { img: "/morden-cladding.jpg", title: "Morden Cladding", date: "2025-09-01", location: "Area 15", desc: "Cladding project in progress.", tags: "#Cladding #Modern", type: "inprogress" },
-  // Service
-  { img: "/cantilever.jpg", title: "Cantilever", date: "2025-08-24", location: "Area 49", desc: "Structural cantilever service.", tags: "#Service #Structure", type: "service" },
-  { img: "/machinery.jpg", title: "Machinery", date: "2025-08-24", location: "Area 49", desc: "Heavy machinery service.", tags: "#Service #Machinery", type: "service" },
-  // Add more as needed
-];
+// ProjectCard component moved inline
+function ProjectCard({ project }: { project: any }) {
+  const [imgSrc, setImgSrc] = useState(project.img || '/default-project.jpg');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-import { useEffect } from "react";
-import { X, Menu, Facebook, Twitter, Linkedin, Instagram, Youtube, MapPin, Phone, Mail } from "lucide-react";
+  return (
+    <article className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      {/* Project header with location and date */}
+      <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+          <HardHat size={18} className="text-white" />
+        </div>
+        <div>
+          <div className="font-medium text-gray-800">{project.location || 'Location not specified'}</div>
+          <div className="text-sm text-gray-500">
+            {project.date ? new Date(project.date).toLocaleDateString() : 'Date not available'}
+          </div>
+        </div>
+      </div>
+
+      {/* Project image */}
+      <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(imgSrc)}>
+        <img 
+          src={imgSrc} 
+          alt={project.title || 'Project image'} 
+          className="w-full h-full object-cover"
+          onError={() => setImgSrc('/default-project.jpg')}
+        />
+      </div>
+
+      {/* Project details */}
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-800 mb-2">{project.title || 'Untitled Project'}</h3>
+        <p className="text-gray-600 text-sm mb-3">
+          {project.desc || 'No description available for this project.'}
+        </p>
+        <p className="text-primary text-xs font-mono mb-4">
+          {project.tags || '#construction #project'}
+        </p>
+        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
+          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+            {project.type || 'Project'}
+          </span>
+        </div>
+      </div>
+
+      {/* Image modal (simplified version) */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative w-full max-w-4xl">
+            <img 
+              src={selectedImage} 
+              alt="Enlarged view" 
+              className="w-full h-auto max-h-[80vh] object-contain"
+            />
+            <button 
+              className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage(null);
+              }}
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+// This function needs to be called from a client component
+async function getProjects() {
+  try {
+    const result = await getContents();
+    if (result.success && result.data) {
+      // Transform the data to match the expected format
+      return result.data.map(project => ({
+        img: project.featuredMedia || "/default-project.jpg",
+        title: project.title,
+        date: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
+        location: project.metadata?.location || "Location not specified",
+        desc: project.content.substring(0, 100) + (project.content.length > 100 ? '...' : ''),
+        tags: project.tags?.map(tag => `#${tag}`).join(' ') || "#Construction",
+        type: project.category?.toLowerCase() || "service"
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    return [];
+  }
+}
+
+
+// Header Component
 
 function scrollToSection(id: string) {
   if (typeof window !== 'undefined') {
@@ -30,9 +115,10 @@ function scrollToSection(id: string) {
   }
 }
 
+// Header Section Component
 function Header() {
-  const [isScrolled, setIsScrolled] = React.useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,8 +138,8 @@ function Header() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <HardHat size={32} className={isScrolled ? 'text-primary' : 'text-primary'} />
-            <div className={isScrolled ? 'text-gray-800 font-bold text-xl lg:text-2xl' : 'text-gray-800 font-bold text-xl lg:text-2xl'}>
+            <HardHat size={32} className={isScrolled ? 'text-primary' : 'text-primary'} /> {/* Helmet icon */}
+            <div className={'text-gray-800 font-bold text-xl lg:text-2xl'}>
               Roy Construction
             </div>
           </Link>
@@ -61,27 +147,25 @@ function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
             <button
-              className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-gray-800 hover:text-gray-200 transition-colors'}
+              className={'text-gray-800 hover:text-gray-600 transition-colors'}
               onClick={() => scrollToSection('services')}
               type="button"
             >
               Services
             </button>
-            <Link href="/projects" className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-gray-800 hover:text-gray-200 transition-colors'}>
+            <Link href="/projects" className={'text-gray-800 hover:text-gray-600 transition-colors'}>
               Projects
             </Link>
             <button
-              className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-gray-800 hover:text-gray-200 transition-colors'}
+              className={'text-gray-800 hover:text-gray-600 transition-colors'}
               onClick={() => scrollToSection('contact')}
               type="button"
             >
               Contacts
             </button>
-            <Link href="/login" className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-gray-800 hover:text-gray-200 transition-colors'}>
-              {/* Removed account icon from header navigation */}
-            </Link>
+            {/* Replaced Contact link with Get Quote button */}
             <Link href="#get-quote">
-              <button className='bg-primary rounded-sm text-gray-800 px-6 py-2 font-medium hover:bg-primary/90 transition-colors'>
+              <button className={'text-gray-800 hover:text-gray-600 bg-primary px-6 py-2 font-medium rounded-sm hover:bg-primary/90'}>
                 Request Quote
               </button>
             </Link>
@@ -90,7 +174,7 @@ function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={isScrolled ? 'lg:hidden text-gray-800 p-2' : 'lg:hidden text-white p-2'}
+            className={'lg:hidden text-gray-800 p-2'}
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -98,10 +182,10 @@ function Header() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-primary/95 backdrop-blur-sm border-t border-white/20">
+          <div className="lg:hidden bg-white/95 text-gray-800 backdrop-blur-sm border-t border-white/20">
             <nav className="py-4 space-y-2">
               <button
-                className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   scrollToSection('services');
@@ -112,13 +196,13 @@ function Header() {
               </button>
               <Link
                 href="/projects"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Projects
               </Link>
               <button
-                className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   scrollToSection('contact');
@@ -129,12 +213,11 @@ function Header() {
               </button>
               <Link
                 href="#get-quote"
-                className="block px-4 py-2 text-white hover:bg-white/10 transition-colors"
+                className="block px-4 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <button className="w-full bg-primary text-white py-2 font-medium hover:bg-primary/90 transition-colors">
                   Request Quote
-                  Get Quote
                 </button>
               </Link>
             </nav>
@@ -145,62 +228,15 @@ function Header() {
   );
 }
 
-export default function ProjectsPage() {
-  // Project selection state can be added here when needed
-  return (
-    <div className="min-h-screen bg-white flex flex-col relative">
-      <Header />
-      <section className="py-20 lg:py-28 bg-white flex-1">
-        <div className="container mx-auto px-4">
-          <div className="text-left mb-10">
-            <h2 className="text-3xl lg:text-4xl font-bold text-primary">All Projects</h2>
-            <p className="text-gray-600 max-w-2xl mt-2">Completed, in-progress, and service projects at a glance.</p>
-          </div>
-          <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
-            {allProjects.map((p, i) => (
-              <article key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <div className="p-4 flex items-center gap-3 border-b border-gray-100">
-                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center"><HardHat size={18} className="text-white" /></div>
-                  <div>
-                    <div className="font-medium text-gray-800">{p.location}</div>
-                    <div className="text-sm text-gray-500">{new Date(p.date).toLocaleDateString()}</div>
-                  </div>
-                </div>
-                <div className="relative aspect-video"><Image src={p.img} alt={p.title} fill className="object-cover" /></div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 mb-2">{p.title}</h3>
-                  <p className="text-gray-600 text-sm mb-3">{p.desc}</p>
-                  <p className="text-primary text-xs font-mono mb-4">{p.tags}</p>
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <button
-                      className="text-sm text-gray-600 hover:text-primary px-3 py-1.5 rounded-md border border-gray-300 hover:border-primary transition-colors"
-                    >
-                      View Details
-                    </button>
-                    <span className="text-xs text-gray-400">{p.type}</span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-      <FooterSection />
-      {/* Floating Login Button - improved positioning */}
-      <Link href="/login" className="fixed bottom-8 right-13 z-50 bg-white text-primary rounded-full shadow-lg p-3 hover:bg-primary/90 hover:text-white transition-colors flex items-center justify-center" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }} aria-label="Login">
-        <Plus size={28} />
-      </Link>
-    </div>
-  );
-}
 
+// Footer Section Component
 function FooterSection() {
   return (
-    <footer className="text-white" style={{ background: 'var(--color-footer-bg)' }}>
+    <footer className="text-white" style={{ background: 'black' }}>
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Contact Info */}
-          <div className="text-white/90 text-sm space-y-2 text-left">
+          <div className="text-white text-sm space-y-2 text-left">
             <div className="flex items-center gap-2">
               <MapPin size={18} className="flex-shrink-0" />
               <span>Lilongwe, Bypass Road, Central Region, Malawi</span>
@@ -218,23 +254,23 @@ function FooterSection() {
         {/* Bottom Footer with Social Links */}
         <div className="border-t border-white/20 mt-12 pt-8 flex flex-col lg:flex-row items-center justify-between text-left gap-4">
           <div className="flex space-x-4 mb-2 lg:mb-0">
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Facebook size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Twitter size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Linkedin size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Instagram size={28} />
             </Link>
-            <Link href="#" className="text-white/70 hover:text-white transition-colors">
+            <Link href="#" className="text-white hover:text-white transition-colors">
               <Youtube size={28} />
             </Link>
           </div>
-          <p className="text-white/60 text-sm">
+          <p className="text-white text-sm">
             {new Date().getFullYear()} Roy Construction. All rights reserved.
           </p>
         </div>
@@ -242,3 +278,74 @@ function FooterSection() {
     </footer>
   );
 }
+
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const result = await getContents();
+        if (result.success && result.data) {
+          const formattedProjects = result.data.map((project: any) => ({
+            img: project.featuredMedia || "/default-project.jpg",
+            title: project.title,
+            date: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
+            location: project.metadata?.location || "Location not specified",
+            desc: project.content ? (typeof project.content === 'string' ?
+              project.content.substring(0, 100) + (project.content.length > 100 ? '...' : '') :
+              'No description available') : 'No description available',
+            tags: project.tags?.map((t: any) => `#${t}`).join(' ') || "#Construction",
+            type: project.category?.toLowerCase() || "service"
+          }));
+          setProjects(formattedProjects);
+        }
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col relative">
+      <Header />
+      <main className="flex-1">
+        <section className="py-12 lg:py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="text-left mb-10">
+              <h1 className="text-3xl lg:text-4xl font-bold text-primary mb-2">Our Projects</h1>
+              <p className="text-gray-600 max-w-2xl">Completed, in-progress, and service projects at a glance.</p>
+            </div>
+
+            <div className="max-w-8xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+              {projects.map((project, index) => (
+                <ProjectCard key={index} project={project} />
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+
+      <FooterSection />
+      {/* Floating Login Button - improved positioning */}
+      <Link href="/login" className="fixed bottom-8 right-13 z-50 bg-white text-primary rounded-full shadow-lg p-3 hover:bg-primary/90 hover:text-white transition-colors flex items-center justify-center" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }} aria-label="Login">
+        <Plus size={28} />
+      </Link>
+    </div>
+  );
+}
+

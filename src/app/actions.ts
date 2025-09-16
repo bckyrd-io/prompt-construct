@@ -207,17 +207,38 @@ export async function updatePage(formData: FormData) {
 interface ContentItem {
   id: number;
   title: string;
-  tags?: string[];
+  content: string;
+  featuredMedia?: string | null;
+  isPublished?: boolean | null;
+  publishedAt?: Date | null;
+  category?: string | null;
+  tags?: string[] | null;
+  metadata?: Record<string, any>;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export async function getContents(): Promise<{ success: boolean; data?: ContentItem[]; message?: string }> {
   try {
     const contents = await dbGetContents();
-    const formattedContents: ContentItem[] = contents.map(content => ({
-      id: content.id,
-      title: content.title,
-      ...(content.tags && { tags: content.tags })
-    }));
+    const formattedContents: ContentItem[] = contents.map(content => {
+      const item: ContentItem = {
+        id: content.id,
+        title: content.title,
+        content: content.content || '',
+      };
+      
+      if (content.featuredMedia) item.featuredMedia = content.featuredMedia;
+      if (content.isPublished !== undefined) item.isPublished = content.isPublished;
+      if (content.publishedAt) item.publishedAt = content.publishedAt;
+      if (content.category) item.category = content.category;
+      if (content.tags) item.tags = content.tags;
+      if (content.metadata) item.metadata = content.metadata;
+      if (content.createdAt) item.createdAt = content.createdAt;
+      if (content.updatedAt) item.updatedAt = content.updatedAt;
+      
+      return item;
+    });
     
     return { success: true, data: formattedContents };
   } catch (error) {
