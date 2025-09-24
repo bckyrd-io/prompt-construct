@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { updatePage, deletePage, getContentById } from '@/app/actions';
 
 type Tag = string;
 
 interface ApiResponse<T> {
-  success: boolean;
-  data: T | null;
-  message?: string;
+    success: boolean;
+    data: T | null;
+    message?: string;
 }
 
 interface Message {
-  text: string;
-  type: 'success' | 'error';
+    text: string;
+    type: 'success' | 'error';
 }
 
 interface ContentData {
@@ -40,16 +40,29 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [contentData, setContentData] = useState<ContentData | null>(null);
     const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
+    const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
     const [tags, setTags] = useState<Tag[]>([]);
     const [tagInput, setTagInput] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [message, setMessage] = useState<Message | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isPublished, setIsPublished] = useState<boolean>(false);
+
+    // Helper to resolve media URL from DB value
+    const resolveMediaUrl = (value?: string | null) => {
+        if (!value) return null;
+        // If it's an absolute URL or already root-relative, use as-is
+        if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')) {
+            return value;
+        }
+        // Otherwise, assume it lives under /uploads in public/
+        return `/uploads/${value}`;
+    };
 
     // Load content data
     useEffect(() => {
@@ -58,19 +71,20 @@ export default function EditPage({ params }: { params: { id: string } }) {
                 setIsLoading(false);
                 return;
             }
-            
+
             setIsLoading(true);
             try {
                 if (!isNaN(contentId)) {
                     const response = await getContentById(contentId) as ApiResponse<ContentData>;
-                const { success, data } = response;
+                    const { success, data } = response;
                     if (success && data) {
                         setContentData(data);
                         setTitle(data.title || '');
-                        setContent(data.content || '');
+                        setDescription(data.content || '');
                         setCategory(data.category || '');
                         setTags(Array.isArray(data.tags) ? data.tags : []);
-                        setPreviewUrl(data.featuredMedia || null);
+                        setPreviewUrl(resolveMediaUrl(data.featuredMedia));
+                        setIsPublished(Boolean(data.isPublished));
                         setIsLoading(false);
                     } else {
                         setMessage({ text: response.message || 'Failed to load content', type: 'error' });
@@ -97,7 +111,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
             const newTag = tagInput.trim().replace(/,/g, '');
-            if (newTag && !tags.includes(newTag)) {
+            const lowerExisting = tags.map(t => t.toLowerCase());
+            if (newTag && !lowerExisting.includes(newTag.toLowerCase())) {
                 setTags([...tags, newTag]);
                 setTagInput('');
             }
@@ -125,15 +140,18 @@ export default function EditPage({ params }: { params: { id: string } }) {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('category', category || '');
-            formData.append('content', content || '');
-            formData.append('id', params.id);
-            
+            // Submit description as 'content' to match backend schema
+            formData.append('content', description || '');
+            formData.append('id', params.id === 'new' ? '0' : params.id);
+            formData.append('isPublished', String(isPublished));
+
             tags.forEach((tag: Tag) => {
                 formData.append('tags', tag);
             });
 
             if (file) {
-                formData.append('file', file);
+                // Server expects the uploaded file under 'featuredImage'
+                formData.append('featuredImage', file);
             }
 
             const result = await updatePage(formData);
@@ -156,6 +174,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const handleDelete = async () => {
         if (window.confirm('Are you sure you want to delete this content?')) {
             try {
+                setIsDeleting(true);
                 const formData = new FormData();
                 formData.append('id', params.id);
                 const result = await deletePage(formData);
@@ -168,6 +187,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
             } catch (error) {
                 console.error('Error deleting content:', error);
                 setMessage({ text: 'An error occurred while deleting the content', type: 'error' });
+            } finally {
+                setIsDeleting(false);
             }
         }
     };
@@ -191,277 +212,229 @@ export default function EditPage({ params }: { params: { id: string } }) {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-            <div className="max-w-4xl mx-auto">
-                <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        {contentData ? 'Edit Content' : 'Create New Content'}
-                    </h1>
+        <div className="min-h-screen bg-gray-50 p-8 pt-0">
+            <div className="max-w-2xl mx-auto bg-white p-8 pt-2 rounded shadow">
+                <div className="flex items-center mb-6">
                     <button
-                        type="button"
+                        className="text-primary hover:text-secondary flex items-center gap-2"
                         onClick={() => router.back()}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                        disabled={isSaving}
+                        aria-label="Go Back"
                     >
-                        ← Back to Dashboard
+                        <ChevronLeft size={24} />
+                        <span className="hidden sm:inline">Back</span>
                     </button>
                 </div>
-                
+
                 <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                     {message && (
                         <div className={`p-4 ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
                             {message.text}
                         </div>
                     )}
-                    
+
                     <form onSubmit={handleSubmit} className="divide-y divide-gray-200">
                         <div className="grid grid-cols-6 gap-6">
                             <div className="col-span-6">
-                                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                                        Title <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="title"
-                                        name="title"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
-                                        required
-                                    />
-                                </div>
+                                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+                                <input
+                                    type="text"
+                                    id="title"
+                                    name="title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border p-2"
+                                    required
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div className="col-span-6">
+                                <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea
+                                    id="description"
+                                    rows={2}
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border p-2"
+                                    placeholder="Write your description here..."
+                                    required
+                                />
+                            </div>
 
 
-                                {/* Content */}
-                                <div className="col-span-6">
-                                    <label htmlFor="content" className="block text-sm font-medium text-gray-700">
-                                        Content <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                        id="content"
-                                        name="content"
-                                        rows={10}
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
-                                        placeholder="Write your full content here..."
-                                        required
-                                    />
-                                </div>
 
-                                {/* Category */}
-                                <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                                        Category
-                                    </label>
-                                    <select
-                                        id="category"
-                                        name="category"
-                                        value={category}
-                                        onChange={(e) => setCategory(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                                    >
-                                        <option value="">Select a category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat} value={cat}>
-                                                {cat}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* Featured Image */}
+                            <div className="col-span-6">
+                                <label className="block text-sm font-medium text-gray-700">Featured Media</label>
 
-                                {/* Tags */}
-                                <div className="col-span-6 sm:col-span-3">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Tags
-                                    </label>
-                                    <div className="mt-1">
-                                        <div className="flex flex-wrap gap-2 mb-2">
-                                            {tags.map((tag: Tag) => (
-                                                <span
-                                                    key={tag}
-                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
-                                                >
-                                                    {tag}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeTag(tag)}
-                                                        className="ml-1.5 inline-flex text-primary/70 hover:text-primary focus:outline-none"
-                                                        disabled={isSaving}
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                        <div className="flex rounded-md shadow-sm">
-                                            <input
-                                                type="text"
-                                                value={tagInput}
-                                                onChange={(e) => setTagInput(e.target.value)}
-                                                onKeyDown={handleTagKeyDown}
-                                                placeholder="Add a tag and press Enter"
-                                                className="block w-full rounded-none rounded-l-md border-gray-300 focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 sm:text-sm"
-                                                disabled={isSaving}
+                                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+
+                                    {previewUrl ? (
+                                        <div className="relative">
+                                            <img
+                                                src={previewUrl}
+                                                alt="Preview"
+                                                className="max-h-60 mx-auto rounded-md"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-                                                        setTags([...tags, tagInput.trim()]);
-                                                        setTagInput('');
+                                                    // Clear preview entirely to show upload dropzone
+                                                    setPreviewUrl(null);
+                                                    setFile(null);
+                                                    if (fileInputRef.current) {
+                                                        fileInputRef.current.value = '';
                                                     }
                                                 }}
-                                                className="inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 text-sm font-medium rounded-r-md bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                                                disabled={isSaving}
+                                                className="absolute top-0 right-0 p-1 bg-gray-800 rounded-full text-white hover:bg-gray-700 focus:outline-none"
+                                                disabled={isLoading}
                                             >
-                                                Add
+                                                <X className="h-4 w-4" />
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* Featured Image */}
-                                <div className="col-span-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Featured Image
-                                    </label>
-                                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                                        {previewUrl ? (
-                                            <div className="space-y-1 text-center">
-                                                <img
-                                                    src={previewUrl}
-                                                    alt="Preview"
-                                                    className="mx-auto h-32 w-auto object-cover rounded-md"
+                                    ) : (
+                                        <div className="text-center">
+                                            <svg
+                                                className="mx-auto h-12 w-12 text-gray-400"
+                                                stroke="currentColor"
+                                                fill="none"
+                                                viewBox="0 0 48 48"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v12a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                                    strokeWidth={2}
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
                                                 />
-                                                <div className="flex text-sm text-gray-600">
-                                                    <label
-                                                        htmlFor="file-upload"
-                                                        className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
-                                                    >
-                                                        <span>Change</span>
-                                                        <input
-                                                            id="file-upload"
-                                                            name="file-upload"
-                                                            type="file"
-                                                            className="sr-only"
-                                                            onChange={handleFileChange}
-                                                            ref={fileInputRef}
-                                                            accept="image/*"
-                                                        />
-                                                    </label>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setPreviewUrl(null);
-                                                            setFile(null);
-                                                            if (fileInputRef.current) {
-                                                                fileInputRef.current.value = '';
-                                                            }
-                                                        }}
-                                                        className="ml-2 text-sm text-red-600 hover:text-red-800"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-1 text-center">
-                                                <svg
-                                                    className="mx-auto h-12 w-12 text-gray-400"
-                                                    stroke="currentColor"
-                                                    fill="none"
-                                                    viewBox="0 0 48 48"
-                                                    aria-hidden="true"
+                                            </svg>
+                                            <div className="mt-4 flex text-sm text-gray-600">
+                                                <label
+                                                    htmlFor="file-upload"
+                                                    className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/60 focus-within:outline-none"
                                                 >
-                                                    <path
-                                                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                                                        strokeWidth={2}
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
+                                                    <span>Upload Media .</span>
+                                                    <input
+                                                        id="file-upload"
+                                                        name="file-upload"
+                                                        type="file"
+                                                        className="sr-only"
+                                                        onChange={handleFileChange}
+                                                        ref={fileInputRef}
+                                                        accept="image/*"
+                                                        disabled={isLoading}
                                                     />
-                                                </svg>
-                                                <div className="flex text-sm text-gray-600">
-                                                    <label
-                                                        htmlFor="file-upload"
-                                                        className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
-                                                    >
-                                                        <span>Upload a file</span>
-                                                        <input
-                                                            id="file-upload"
-                                                            name="file-upload"
-                                                            type="file"
-                                                            className="sr-only"
-                                                            onChange={handleFileChange}
-                                                            ref={fileInputRef}
-                                                            accept="image/*"
-                                                        />
-                                                    </label>
-                                                    <p className="pl-1">or drag and drop</p>
-                                                </div>
-                                                <p className="text-xs text-gray-500">
-                                                    PNG, JPG, GIF up to 2MB
-                                                </p>
+                                                </label>
+                                                <span> Or drag and drop</span>
+
                                             </div>
-                                        )}
-                                    </div>
+                                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Publish Status */}
-                                <div className="col-span-6">
-                                    <div className="flex items-start">
-                                        <div className="flex items-center h-5">
-                                            <input
-                                                id="isPublished"
-                                                name="isPublished"
-                                                type="checkbox"
-                                                defaultChecked={contentData?.isPublished || false}
-                                                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+
+
+                            </div>
+
+
+
+                            {/* Category */}
+                            <div className="col-span-6 sm:col-span-3">
+                                <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
+                                <select
+                                    id="category"
+                                    name="category"
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border p-2"
+                                >
+                                    <option value="">Select a category</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat} value={cat}>
+                                            {cat}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tags */}
+                            <div className="col-span-6 sm:col-span-3">
+                                <label htmlFor="tags" className="block text-sm font-medium text-gray-700">Tags</label>
+
+                                <div className="mt-1 block w-full rounded-md border p-2 flex flex-wrap gap-2">
+                                    {tags.map((tag: Tag) => (
+                                        <span
+                                            key={tag}
+                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                                        >
+                                            {tag}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeTag(tag)}
+                                                className="ml-1.5 inline-flex text-primary/70 "
                                                 disabled={isSaving}
-                                            />
-                                        </div>
-                                        <div className="ml-3 text-sm">
-                                            <label htmlFor="isPublished" className="font-medium text-gray-700">
-                                                Publish this content
-                                            </label>
-                                            <p className="text-gray-500">This content will be visible to everyone when published.</p>
-                                        </div>
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                    <input
+                                        type="text"
+                                        id="tags"
+                                        value={tagInput}
+                                        onChange={(e) => setTagInput(e.target.value)}
+                                        onKeyDown={handleTagKeyDown}
+                                        placeholder="Add a tag and press Enter"
+                                        className="flex-1 min-w-[160px] outline-none"
+                                        disabled={isSaving}
+                                    />
+                                </div>
+                            </div>
+                            {/* Publish Status */}
+                            <div className="col-span-6">
+                                <div className="flex items-start">
+                                    <div className="flex items-center h-5">
+                                        <input
+                                            id="isPublished"
+                                            name="isPublished"
+                                            type="checkbox"
+                                            checked={isPublished}
+                                            onChange={(e) => setIsPublished(e.target.checked)}
+                                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                            disabled={isSaving}
+                                        />
+                                    </div>
+                                    <div className="ml-3 text-sm">
+                                        <label htmlFor="isPublished" className="font-medium text-gray-700">
+                                            Publish this content
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div className="px-4 py-4 bg-gray-50 text-right sm:px-6">
-                                {contentId && (
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                        disabled={isSaving}
-                                    >
-                                        {isSaving ? 'Deleting...' : 'Delete Content'}
-                                    </button>
-                                )}
-                                <div className={`flex space-x-3 ${!contentId ? 'ml-auto' : ''}`}>
-                                    <button
-                                        type="button"
-                                        onClick={() => router.back()}
-                                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                                        disabled={isSaving}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                                        disabled={isSaving}
-                                    >
-                                        {isSaving ? 'Saving...' : (contentId ? 'Update Content' : 'Create Content')}
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleDelete}
+                            className="block w-full bg-red-500 mb-2 mt-2 text-white px-4 py-2 rounded text-center font-semibold hover:bg-primary/90"
+                            disabled={isSaving || isDeleting}
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete Content'}
+                        </button>
+
+                        <button
+                            type="submit"
+                            className="block w-full bg-primary text-white px-4 py-2 rounded text-center font-semibold hover:bg-primary/90"
+                            disabled={isSaving || isDeleting}
+                        >
+                            {isSaving ? 'Saving...' : (contentId ? 'Update Content' : 'Create Content')}
+                        </button>
+
+
+                    </form>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+}

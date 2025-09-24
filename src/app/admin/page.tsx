@@ -1,16 +1,10 @@
 "use client";
-'use client';
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "lucide-react";
 import { getContents } from "@/app/actions";
-
-interface ContentItem {
-  id: number;
-  title: string;
-  slug: string;
-}
+import type { ContentItem } from "@/app/actions";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -83,8 +77,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded shadow">
+    <div className="min-h-screen bg-gray-50 p-8 pt-0">
+      <div className="max-w-2xl mx-auto bg-white p-8 pt-2 rounded shadow">
         <div className="flex items-center mb-6">
           <button
             className="text-primary hover:text-secondary flex items-center gap-2"

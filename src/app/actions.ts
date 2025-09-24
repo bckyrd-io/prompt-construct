@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import fs from 'fs';
+import path from 'path';
 import { 
   getContentById as dbGetContentById,
   getContents as dbGetContents,
@@ -50,6 +52,25 @@ export async function loginAction(formData: FormData) {
     console.error('Login error:', error);
     return { success: false, message: 'An error occurred during login' };
   }
+}
+
+// Save uploaded file to public/uploads and return stored filename
+async function saveUploadedFile(file: File): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Generate unique filename
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const fileName = `${Date.now()}-${safeName}`;
+  const destPath = path.join(uploadsDir, fileName);
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  fs.writeFileSync(destPath, buffer);
+
+  return fileName; // Client will resolve as /uploads/<fileName>
 }
 
 export async function getSession() {
@@ -110,16 +131,23 @@ interface ContentData {
 
 export async function createContentAction(formData: FormData) {
   try {
-    const { title, content, category, featuredImage, isPublished } = Object.fromEntries(formData.entries());
+    const { title, content, category, isPublished } = Object.fromEntries(formData.entries());
     // Get all tags from form data and ensure they're strings
     const tags = formData.getAll('tags').map(tag => String(tag));
-    
+
+    // If there's a file, save it to public/uploads and store the filename
+    const fileInput = formData.get('featuredImage');
+    let savedFileName: string | null = null;
+    if (fileInput && fileInput instanceof File) {
+      savedFileName = await saveUploadedFile(fileInput);
+    }
+
     const newContent = await dbCreateContent({
       title: String(title),
       content: String(content),
       category: category ? String(category) : undefined,
       tags: tags,
-      featuredMedia: featuredImage ? String(featuredImage) : null,
+      featuredMedia: savedFileName,
       isPublished: isPublished === 'on' || isPublished === 'true',
     });
     
@@ -143,22 +171,22 @@ export async function updatePage(formData: FormData) {
     
     // For new content (id === '0'), we need to create it first
     if (id === '0') {
+      // Collect all tags like in the update path
+      const createTagsArray = formData.getAll('tags').map(tag => String(tag));
       const newContent = await dbCreateContent({
         title: String(title),
         content: String(content),
         category: category ? String(category) : null,
-        tags: tags ? JSON.parse(tags as string) : [],
+        tags: createTagsArray,
         featuredMedia: null, // Will be updated after file upload
         isPublished: isPublished === 'true',
       });
       
       // If there's a file to upload, handle it after creating the content
       if (featuredImage && featuredImage instanceof File) {
-        // In a real app, you would upload the file to a storage service here
-        // For now, we'll just store the file name
-        const fileName = `${Date.now()}-${featuredImage.name}`;
+        const fileName = await saveUploadedFile(featuredImage);
         await dbUpdateContent(newContent.id, {
-          featuredMedia: fileName
+          featuredMedia: fileName,
         });
         newContent.featuredMedia = fileName;
       }
@@ -186,9 +214,7 @@ export async function updatePage(formData: FormData) {
     
     // Only update featured media if a new file was uploaded
     if (featuredImage && featuredImage instanceof File) {
-      // In a real app, you would upload the file to a storage service here
-      // For now, we'll just store the file name
-      const fileName = `${Date.now()}-${featuredImage.name}`;
+      const fileName = await saveUploadedFile(featuredImage);
       updateData.featuredMedia = fileName;
     }
     
@@ -204,7 +230,7 @@ export async function updatePage(formData: FormData) {
   }
 }
 
-interface ContentItem {
+export interface ContentItem {
   id: number;
   title: string;
   content: string;
