@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { User } from "lucide-react";
 import { getContents } from "@/app/actions";
 import type { ContentItem } from "@/app/actions";
@@ -102,13 +103,18 @@ export default function AdminPage() {
               >
                 <span className="flex items-center gap-2">
                   {content.title}
+                  {content.category && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700">
+                      {content.category}
+                    </span>
+                  )}
                 </span>
-                <a 
+                <Link
                   href={`/admin/${content.id}`}
                   className="border border-primary text-primary px-3 py-1 rounded hover:bg-secondary hover:text-white text-sm"
                 >
                   Edit
-                </a>
+                </Link>
               </li>
             ))
           ) : (
@@ -117,12 +123,12 @@ export default function AdminPage() {
             </li>
           )}
         </ul>
-        <a 
-          href="/admin/new" 
+        <Link
+          href="/admin/new"
           className="block w-full bg-primary text-white px-4 py-2 rounded text-center font-semibold hover:bg-primary/90"
         >
           Create New Content
-        </a>
+        </Link>
       </div>
     </div>
   );

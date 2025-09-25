@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ChevronLeft, X } from 'lucide-react';
 import { updatePage, deletePage, getContentById } from '@/app/actions';
 
@@ -38,7 +39,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     // Get the ID from params and ensure it's a string
     const contentId = params.id === 'new' ? null : parseInt(params.id);
     const router = useRouter();
-    const [contentData, setContentData] = useState<ContentData | null>(null);
+    const [, setContentData] = useState<ContentData | null>(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
@@ -52,6 +53,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isPublished, setIsPublished] = useState<boolean>(false);
+    const [locationName, setLocationName] = useState<string>('');
 
     // Helper to resolve media URL from DB value
     const resolveMediaUrl = (value?: string | null) => {
@@ -85,13 +87,17 @@ export default function EditPage({ params }: { params: { id: string } }) {
                         setTags(Array.isArray(data.tags) ? data.tags : []);
                         setPreviewUrl(resolveMediaUrl(data.featuredMedia));
                         setIsPublished(Boolean(data.isPublished));
+                        try {
+                            const meta = (data.metadata as Record<string, unknown>) ?? {};
+                            setLocationName(typeof meta?.locationName === 'string' ? meta.locationName : '');
+                        } catch {}
                         setIsLoading(false);
                     } else {
                         setMessage({ text: response.message || 'Failed to load content', type: 'error' });
                         setIsLoading(false);
                     }
                 }
-            } catch (error: any) {
+            } catch (error) {
                 console.error('Error loading content:', error);
                 setMessage({ text: 'Failed to load content', type: 'error' });
             } finally {
@@ -144,6 +150,7 @@ export default function EditPage({ params }: { params: { id: string } }) {
             formData.append('content', description || '');
             formData.append('id', params.id === 'new' ? '0' : params.id);
             formData.append('isPublished', String(isPublished));
+            formData.append('locationName', locationName || '');
 
             tags.forEach((tag: Tag) => {
                 formData.append('tags', tag);
@@ -204,11 +211,11 @@ export default function EditPage({ params }: { params: { id: string } }) {
     }
 
     const categories = [
-        'Project',
-        'Article',
-        'Update',
-        'News',
-        'Tutorial'
+        'display1',
+        'display2',
+        'project',
+        'display3',
+        'service'
     ];
 
     return (
@@ -261,6 +268,20 @@ export default function EditPage({ params }: { params: { id: string } }) {
                                 />
                             </div>
 
+                            <div className="col-span-6 sm:col-span-3">
+                                <label htmlFor="locationName" className="block text-sm font-medium text-gray-700">Location Name</label>
+                                <input
+                                    type="text"
+                                    id="locationName"
+                                    name="locationName"
+                                    value={locationName}
+                                    onChange={(e) => setLocationName(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border p-2"
+                                    placeholder="e.g., San Francisco, CA"
+                                    disabled={isSaving}
+                                />
+                            </div>
+
 
 
                             {/* Featured Image */}
@@ -271,10 +292,13 @@ export default function EditPage({ params }: { params: { id: string } }) {
 
                                     {previewUrl ? (
                                         <div className="relative">
-                                            <img
+                                            <Image
                                                 src={previewUrl}
                                                 alt="Preview"
-                                                className="max-h-60 mx-auto rounded-md"
+                                                width={300}
+                                                height={200}
+                                                className="max-h-60 mx-auto rounded-md object-contain"
+                                                style={{ height: 'auto' }}
                                             />
                                             <button
                                                 type="button"

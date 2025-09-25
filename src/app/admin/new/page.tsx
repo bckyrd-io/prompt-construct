@@ -4,6 +4,7 @@ import { useState, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, X } from 'lucide-react';
 import { createContentAction } from '@/app/actions';
+import Image from 'next/image';
 
 export default function NewContentPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function NewContentPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPublished, setIsPublished] = useState<boolean>(false);
+  const [locationName, setLocationName] = useState<string>('');
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -55,6 +57,7 @@ export default function NewContentPage() {
       // Submit description as 'content' to match backend schema
       formData.append('content', description || '');
       formData.append('isPublished', String(isPublished));
+      formData.append('locationName', locationName || '');
 
       tags.forEach(tag => {
         formData.append('tags', tag);
@@ -131,12 +134,33 @@ export default function NewContentPage() {
               />
             </div>
 
+            <div className="col-span-6 sm:col-span-3">
+              <label htmlFor="locationName" className="block text-sm font-medium text-gray-700">Location Name</label>
+              <input
+                type="text"
+                id="locationName"
+                name="locationName"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+                className="mt-1 block w-full rounded-md border p-2"
+                placeholder="e.g., San Francisco, CA"
+                disabled={isLoading}
+              />
+            </div>
+
             <div className="col-span-6">
               <label className="block text-sm font-medium text-gray-700">Featured Media</label>
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                 {previewUrl ? (
                   <div className="relative">
-                    <img src={previewUrl} alt="Preview" className="max-h-60 mx-auto rounded-md" />
+                    <Image
+                      src={previewUrl}
+                      alt="Preview"
+                      width={800}
+                      height={600}
+                      className="max-h-60 mx-auto rounded-md w-auto h-auto"
+                      unoptimized
+                    />
                     <button
                       type="button"
                       onClick={() => {
@@ -204,7 +228,7 @@ export default function NewContentPage() {
                 disabled={isLoading}
               >
                 <option value="">Select a category</option>
-                {['Project','Article','Update','News','Tutorial'].map((cat) => (
+                {['display1','display2','project','display3','service'].map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -276,3 +300,4 @@ export default function NewContentPage() {
     </div>
   );
 }
+

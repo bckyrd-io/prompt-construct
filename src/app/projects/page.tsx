@@ -4,9 +4,40 @@ import { getContents } from "@/app/actions";
 import Link from "next/link";
 import { Facebook, HardHat, Instagram, Linkedin, Mail, MapPin, Menu, Phone, Plus, Twitter, X, Youtube } from "lucide-react";
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+
+interface ContentMetadata {
+  locationName?: string;
+  location?: string;
+  [key: string]: unknown;
+}
+
+interface ContentItem {
+  id: number;
+  title: string;
+  content: string;
+  featuredMedia?: string | null;
+  isPublished?: boolean | null;
+  publishedAt?: Date | null;
+  category?: string | null;
+  tags?: string[] | null;
+  metadata?: ContentMetadata;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+interface Project {
+  img: string;
+  title: string;
+  date: string;
+  location: string;
+  desc: string;
+  tags: string;
+  type: string;
+}
 
 // ProjectCard component moved inline
-function ProjectCard({ project }: { project: any }) {
+function ProjectCard({ project }: { project: Project }) {
   const [imgSrc, setImgSrc] = useState(project.img || '/default-project.jpg');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -27,11 +58,14 @@ function ProjectCard({ project }: { project: any }) {
 
       {/* Project image */}
       <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(imgSrc)}>
-        <img 
-          src={imgSrc} 
-          alt={project.title || 'Project image'} 
+        <Image
+          src={imgSrc}
+          alt={project.title || 'Project image'}
+          width={800}
+          height={450}
           className="w-full h-full object-cover"
           onError={() => setImgSrc('/default-project.jpg')}
+          unoptimized
         />
       </div>
 
@@ -45,8 +79,7 @@ function ProjectCard({ project }: { project: any }) {
           {project.tags || '#construction #project'}
         </p>
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+          <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
             {project.type || 'Project'}
           </span>
         </div>
@@ -54,17 +87,20 @@ function ProjectCard({ project }: { project: any }) {
 
       {/* Image modal (simplified version) */}
       {selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative w-full max-w-4xl">
-            <img 
-              src={selectedImage} 
-              alt="Enlarged view" 
+            <Image
+              src={selectedImage}
+              alt="Enlarged view"
+              width={1200}
+              height={800}
               className="w-full h-auto max-h-[80vh] object-contain"
+              unoptimized
             />
-            <button 
+            <button
               className="absolute -top-10 right-0 text-white hover:text-gray-300"
               onClick={(e) => {
                 e.stopPropagation();
@@ -80,40 +116,18 @@ function ProjectCard({ project }: { project: any }) {
   );
 }
 
-// This function needs to be called from a client component
-async function getProjects() {
-  try {
-    const result = await getContents();
-    if (result.success && result.data) {
-      // Transform the data to match the expected format
-      return result.data.map(project => ({
-        img: project.featuredMedia || "/default-project.jpg",
-        title: project.title,
-        date: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
-        location: project.metadata?.location || "Location not specified",
-        desc: project.content.substring(0, 100) + (project.content.length > 100 ? '...' : ''),
-        tags: project.tags?.map(tag => `#${tag}`).join(' ') || "#Construction",
-        type: project.category?.toLowerCase() || "service"
-      }));
-    }
-    return [];
-  } catch (error) {
-    console.error("Error fetching projects:", error);
-    return [];
-  }
-}
 
 
 // Header Component
 
-function scrollToSection(id: string) {
-  if (typeof window !== 'undefined') {
-    const section = document.getElementById(id);
-    if (section) {
-      section.scrollIntoView({ behavior: 'smooth' });
-    }
-  }
-}
+// function scrollToSection(id: string) {
+//   if (typeof window !== 'undefined') {
+//     const section = document.getElementById(id);
+//     if (section) {
+//       section.scrollIntoView({ behavior: 'smooth' });
+//     }
+//   }
+// }
 
 // Header Section Component
 function Header() {
@@ -146,23 +160,15 @@ function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            <button
-              className={'text-gray-800 hover:text-gray-600 transition-colors'}
-              onClick={() => scrollToSection('services')}
-              type="button"
-            >
+            <Link href="/#services" className={'text-gray-800 hover:text-gray-600 transition-colors'}>
               Services
-            </button>
+            </Link>
             <Link href="/projects" className={'text-gray-800 hover:text-gray-600 transition-colors'}>
               Projects
             </Link>
-            <button
-              className={'text-gray-800 hover:text-gray-600 transition-colors'}
-              onClick={() => scrollToSection('contact')}
-              type="button"
-            >
+            <Link href="/projects/#contacts" className={'text-gray-800 hover:text-gray-600 transition-colors'}>
               Contacts
-            </button>
+            </Link>
             {/* Replaced Contact link with Get Quote button */}
             <Link href="#get-quote">
               <button className={'text-gray-800 hover:text-gray-600 bg-primary px-6 py-2 font-medium rounded-sm hover:bg-primary/90'}>
@@ -184,16 +190,13 @@ function Header() {
         {isMobileMenuOpen && (
           <div className="lg:hidden bg-white/95 text-gray-800 backdrop-blur-sm border-t border-white/20">
             <nav className="py-4 space-y-2">
-              <button
-                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  scrollToSection('services');
-                }}
-                type="button"
+              <Link
+                href="/../#services"
+                className="block px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Services
-              </button>
+              </Link>
               <Link
                 href="/projects"
                 className="block px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
@@ -201,18 +204,15 @@ function Header() {
               >
                 Projects
               </Link>
-              <button
-                className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  scrollToSection('contact');
-                }}
-                type="button"
+              <Link
+                href="/projects/#contacts"
+                className="block px-4 py-2 text-gray-800 hover:bg-white/10 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Contacts
-              </button>
+              </Link>
               <Link
-                href="#get-quote"
+                href="/../#get-quote"
                 className="block px-4 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -232,7 +232,7 @@ function Header() {
 // Footer Section Component
 function FooterSection() {
   return (
-    <footer className="text-white" style={{ background: 'black' }}>
+    <footer className="text-white" id="contacts" style={{ background: 'black' }}>
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Contact Info */}
@@ -280,7 +280,7 @@ function FooterSection() {
 }
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -288,17 +288,19 @@ export default function ProjectsPage() {
       try {
         const result = await getContents();
         if (result.success && result.data) {
-          const formattedProjects = result.data.map((project: any) => ({
-            img: project.featuredMedia || "/default-project.jpg",
+          const formattedProjects: Project[] = result.data.map((project: ContentItem) => ({
+            img: project.featuredMedia ? `/uploads/${project.featuredMedia}` : "/default-project.jpg",
             title: project.title,
             date: project.createdAt ? new Date(project.createdAt).toISOString() : new Date().toISOString(),
-            location: project.metadata?.location || "Location not specified",
+            location: project.metadata?.locationName || project.metadata?.location || "Location not specified",
             desc: project.content ? (typeof project.content === 'string' ?
               project.content.substring(0, 100) + (project.content.length > 100 ? '...' : '') :
               'No description available') : 'No description available',
-            tags: project.tags?.map((t: any) => `#${t}`).join(' ') || "#Construction",
+            tags: project.tags && project.tags.length > 0
+              ? project.tags.map(t => `#${t}`).join(' ')
+              : "#Construction",
             type: project.category?.toLowerCase() || "service"
-          }));
+          } as Project));
           setProjects(formattedProjects);
         }
       } catch (error) {

@@ -1,16 +1,13 @@
 "use client";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { loginAction } from "../actions";
+import Link from "next/link";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const from = searchParams.get('from') || '/admin';
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
@@ -69,6 +66,14 @@ export default function LoginPage() {
                 >
                     {isLoading ? 'Signing in...' : 'Login'}
                 </button>
+                <div className="mt-4">
+                    <Link
+                        href="/"
+                        className="block w-full border border-primary text-primary py-2 rounded font-semibold text-center hover:bg-primary/10"
+                    >
+                        Home
+                    </Link>
+                </div>
             </form>
         </div>
     );

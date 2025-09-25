@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getContents } from '@/app/actions';
+import { getContents, type ContentItem } from '@/app/actions';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,9 +12,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, message: 'Failed to fetch content' }, { status: 400 });
     }
     
+
     // Filter by category if provided
     const filteredData = category 
-      ? result.data.filter((item: any) => 
+      ? result.data.filter((item: ContentItem) => 
           item.category?.toLowerCase() === category.toLowerCase()
         )
       : result.data;

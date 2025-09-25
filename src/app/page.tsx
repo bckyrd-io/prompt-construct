@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { type ContentItem } from './actions';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-
   Menu,
   X,
   MapPin,
@@ -94,23 +94,15 @@ function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            <button
-              className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}
-              onClick={() => scrollToSection('services')}
-              type="button"
-            >
+            <Link href="/#services" className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}>
               Services
-            </button>
+            </Link>
             <Link href="/projects" className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}>
               Projects
             </Link>
-            <button
-              className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}
-              onClick={() => scrollToSection('contact')}
-              type="button"
-            >
+            <Link href="/#contacts" className={isScrolled ? 'text-gray-800 hover:text-gray-600 transition-colors' : 'text-white hover:text-gray-200 transition-colors'}>
               Contacts
-            </button>
+            </Link>
             {/* Replaced Contact link with Get Quote button */}
             <Link href="#get-quote">
               <button className={`${isScrolled ? 'text-gray-800 hover:text-gray-600' : 'text-white hover:text-gray-200'} transition-colors bg-primary px-6 py-2 font-medium rounded-sm hover:bg-primary/90`}>
@@ -190,15 +182,15 @@ function HeroSection() {
   useEffect(() => {
     const fetchHeroData = async () => {
       try {
-        const response = await fetch('/api/content?category=hero');
+        const response = await fetch('/api/content?category=display1');
         const result = await response.json();
-        
+
         if (result.success && result.data && result.data.length > 0) {
           const heroItem = result.data[0]; // Get first hero item
-          const mediaUrl = heroItem.featuredMedia ? `/${heroItem.featuredMedia}` : '/gate.mp4';
+          const mediaUrl = heroItem.featuredMedia ? `/uploads/${heroItem.featuredMedia}` : '/gate.mp4';
           const mediaType = heroItem.featuredMedia?.endsWith('.mp4') || heroItem.featuredMedia?.endsWith('.webm')
             ? 'video' : 'image';
-          
+
           setHeroContent({
             title: heroItem.title || 'Your Trusted Construction Partner in Malawi',
             mediaUrl,
@@ -297,15 +289,15 @@ function Hero3Section() {
   useEffect(() => {
     const fetchHeroData = async () => {
       try {
-        const response = await fetch('/api/content?category=metal-works');
+        const response = await fetch('/api/content?category=display3');
         const result = await response.json();
-        
+
         if (result.success && result.data && result.data.length > 0) {
           const heroItem = result.data[0];
           const mediaUrl = heroItem.featuredMedia ? `/${heroItem.featuredMedia}` : '/metal.mp4';
           const mediaType = heroItem.featuredMedia?.endsWith('.mp4') || heroItem.featuredMedia?.endsWith('.webm')
             ? 'video' : 'image';
-          
+
           setHeroContent({
             title: heroItem.title || 'Metal Works in Progress',
             mediaUrl,
@@ -399,15 +391,15 @@ function Hero2Section() {
   useEffect(() => {
     const fetchHeroData = async () => {
       try {
-        const response = await fetch('/api/content?category=hero2');
+        const response = await fetch('/api/content?category=display2');
         const result = await response.json();
-        
+
         if (result.success && result.data && result.data.length > 0) {
           const heroItem = result.data[0];
-          const mediaUrl = heroItem.featuredMedia ? `/${heroItem.featuredMedia}` : '/dimension.jpg';
+          const mediaUrl = heroItem.featuredMedia ? `/uploads/${heroItem.featuredMedia}` : '/dimension.jpg';
           const mediaType = heroItem.featuredMedia?.endsWith('.mp4') || heroItem.featuredMedia?.endsWith('.webm')
             ? 'video' : 'image';
-          
+
           setHeroContent({
             title: heroItem.title || '',
             mediaUrl,
@@ -545,7 +537,7 @@ function ProcessSection() {
     <section className="bg-primary py-20 lg:py-32">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-16">
-        
+
         </div>
 
         {/* Process Items */}
@@ -565,29 +557,43 @@ function ProcessSection() {
 }
 
 
+interface WorkPost {
+  id: number;
+  title: string;
+  desc: string;
+  img: string;
+  location: string;
+  date: string;
+  tags: string;
+}
+
 function WorkSection() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<WorkPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchWorkData = async () => {
       try {
-        const response = await fetch('/api/content?category=work');
+        const response = await fetch('/api/content?category=project');
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           // Transform the data to match the expected format
-          const workPosts = result.data.map((item: any) => ({
+          const workPosts = result.data.map((item: ContentItem) => ({
             id: item.id,
             title: item.title,
-            desc: item.content?.substring(0, 100) + (item.content?.length > 100 ? '...' : '') || 'No description available',
-            img: item.featuredMedia ? `/${item.featuredMedia}` : '/default-project.jpg',
-            location: item.metadata?.location || 'Location not specified',
-            date: item.createdAt || new Date().toISOString(),
-            tags: item.tags?.map((t: string) => `#${t}`).join(' ') || '#construction',
+            desc: item.content ? (typeof item.content === 'string' ?
+              item.content.substring(0, 100) + (item.content.length > 100 ? '...' : '') :
+              'No description available') : 'No description available',
+            img: item.featuredMedia ? `/uploads/${item.featuredMedia}` : '/default-project.jpg',
+            location: (item.metadata && 'locationName' in item.metadata && item.metadata.locationName) ||
+              (item.metadata && 'location' in item.metadata && item.metadata.location) ||
+              'Location not specified',
+            date: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
+            tags: item.tags && item.tags.length > 0 ? item.tags.map(t => `#${t}`).join(' ') : '#construction',
           }));
-          
+
           setPosts(workPosts);
         }
       } catch (error) {
@@ -633,13 +639,13 @@ function WorkSection() {
           <h2 className="text-3xl lg:text-4xl font-bold text-primary">Recent Work</h2>
           <p className="text-gray-600 max-w-2xl mt-2">Latest completed projects and milestones.</p>
         </div>
-        
+
         {isLoading && (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         )}
-        
+
         {!isLoading && posts.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500">No work projects found.</p>
@@ -658,10 +664,10 @@ function WorkSection() {
               </div>
 
               <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(p.img)}>
-                <Image 
-                  src={p.img} 
-                  alt={p.title} 
-                  fill 
+                <Image
+                  src={p.img}
+                  alt={p.title}
+                  fill
                   className="object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -674,10 +680,6 @@ function WorkSection() {
                 <h3 className="font-semibold text-gray-800 mb-2">{p.title}</h3>
                 <p className="text-gray-600 text-sm mb-3">{p.desc}</p>
                 <p className="text-primary text-xs font-mono mb-4">{p.tags}</p>
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
-
-                </div>
               </div>
             </article>
           ))}
@@ -692,7 +694,7 @@ function WorkSection() {
 
 function ServiceSection() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<WorkPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -700,19 +702,20 @@ function ServiceSection() {
       try {
         const response = await fetch('/api/content?category=service');
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           // Transform the data to match the expected format
-          const servicePosts = result.data.map((item: any) => ({
+          const servicePosts = result.data.map((item: ContentItem) => ({
             id: item.id,
             title: item.title,
             desc: item.content?.substring(0, 100) + (item.content?.length > 100 ? '...' : '') || 'No description available',
-            img: item.featuredMedia ? `/${item.featuredMedia}` : '/default-project.jpg',
-            location: item.metadata?.location || 'Location not specified',
+            img: item.featuredMedia ? `/uploads/${item.featuredMedia}` : '/default-project.jpg',
+            location: (item.metadata && 'locationName' in item.metadata ? item.metadata.locationName :
+              (item.metadata && 'location' in item.metadata ? item.metadata.location : 'Location not specified')) as string,
             date: item.createdAt || new Date().toISOString(),
             tags: item.tags?.map((t: string) => `#${t}`).join(' ') || '#service',
           }));
-          
+
           setPosts(servicePosts);
         }
       } catch (error) {
@@ -729,7 +732,7 @@ function ServiceSection() {
   const displayPosts = posts.length > 0 ? posts : [
     {
       id: 1,
-      img: "/perfect-work.jpg", 
+      img: "/perfect-work.jpg",
       title: "Perfect Work",
       date: new Date().toISOString(),
       location: "Lilongwe Central",
@@ -766,12 +769,12 @@ function ServiceSection() {
         </div>
       )}
 
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4" id='services'>
         <div className="text-left mb-10">
           <h2 className="text-3xl lg:text-4xl font-bold text-primary">Services</h2>
           <p className="text-gray-600 max-w-2xl mt-2">Check Out What We Can Work On.</p>
         </div>
-        
+
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -793,10 +796,10 @@ function ServiceSection() {
                 </div>
 
                 <div className="relative aspect-video cursor-pointer" onClick={() => setSelectedImage(post.img)}>
-                  <Image 
-                    src={post.img} 
-                    alt={post.title} 
-                    fill 
+                  <Image
+                    src={post.img}
+                    alt={post.title}
+                    fill
                     className="object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -809,10 +812,7 @@ function ServiceSection() {
                   <h3 className="font-semibold text-gray-800 mb-2">{post.title}</h3>
                   <p className="text-gray-600 text-sm mb-3">{post.desc}</p>
                   <p className="text-primary text-xs font-mono mb-4">{post.tags}</p>
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <a href="#" className="text-sm text-gray-600 hover:text-primary">View Details</a>
-                    <a href="#" className="text-sm text-gray-600 hover:text-primary">Share</a>
-                  </div>
+
                 </div>
               </article>
             ))}
@@ -889,7 +889,7 @@ function ContactCTASection() {
 // Footer Section Component
 function FooterSection() {
   return (
-    <footer className="text-white" style={{ background: 'black' }}>
+    <footer className="text-white" id='contacts' style={{ background: 'black' }}>
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Contact Info */}

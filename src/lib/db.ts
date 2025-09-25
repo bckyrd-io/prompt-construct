@@ -1,35 +1,47 @@
-// Import only types from 'pg' to avoid client-side bundling issues
-type Pool = any;
+import { drizzle } from 'drizzle-orm/node-postgres';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+
+// Import schema types
+import { eq, desc, and } from 'drizzle-orm';
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
+  boolean,
+  jsonb,
+} from 'drizzle-orm/pg-core';
+import { hash } from 'bcryptjs';
 
 declare global {
   // This ensures we can access the pool in server components
   var _pool: Pool | undefined;
 }
 
-// Only import server-side dependencies in server-side code
-let _db: any;
+let _db: NodePgDatabase | undefined;
 let pool: Pool;
 
 // This function will be used to get the database instance
-export function getDb() {
+export function getDb(): { db: NodePgDatabase; pool: Pool } {
   if (typeof window !== 'undefined') {
     throw new Error('Database operations can only be performed on the server side');
   }
 
   if (!_db) {
-    // Dynamic imports for server-side only
-    const { Pool } = require('pg');
-    const { drizzle } = require('drizzle-orm/node-postgres');
-    
     if (!global._pool) {
       const connectionUrl = new URL(process.env.POSTGRES_URL!);
       const dbName = connectionUrl.pathname.replace(/^\//, '');
 
-      const sslConfig = process.env.NODE_ENV === 'production' ? {
-        ssl: {
-          rejectUnauthorized: false
-        }
-      } : {};
+      const sslConfig =
+        process.env.NODE_ENV === 'production'
+          ? {
+              ssl: {
+                rejectUnauthorized: false,
+              },
+            }
+          : {};
 
       global._pool = new Pool({
         host: connectionUrl.hostname,
@@ -37,29 +49,16 @@ export function getDb() {
         user: connectionUrl.username,
         password: connectionUrl.password,
         database: dbName,
-        ...sslConfig
+        ...sslConfig,
       });
     }
-    
+
     pool = global._pool;
     _db = drizzle(pool);
   }
-  
-  return { db: _db, pool };
-}
 
-// Import schema types
-import { eq, desc, and } from 'drizzle-orm';
-import { 
-  pgTable, 
-  serial, 
-  text, 
-  timestamp, 
-  varchar, 
-  boolean,
-  jsonb
-} from 'drizzle-orm/pg-core';
-import { hash } from 'bcryptjs';
+  return { db: _db!, pool };
+}
 
 // Set default admin email/password if not provided
 process.env.ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
@@ -104,17 +103,18 @@ export const users = pgTable('users', {
 // ============================================
 
 // Get the db instance when needed
-function getDatabase() {
+function getDatabase(): NodePgDatabase {
   const { db } = getDb();
   return db;
 }
 
-export const db = new Proxy({}, {
-  get(_, prop) {
-    const db = getDatabase();
-    return db[prop as keyof typeof db];
-  }
-}) as any;
+export const db: NodePgDatabase = new Proxy({} as NodePgDatabase, {
+  get(target, prop: string | symbol, receiver: unknown) {
+    const dbInstance = getDatabase();
+    // Use Reflect.get to safely access properties without assuming an index signature
+    return Reflect.get(dbInstance as unknown as Record<string | symbol, unknown>, prop, receiver);
+  },
+});
 
 // ============================================
 // Types
@@ -131,24 +131,24 @@ export type NewUser = Omit<typeof users.$inferInsert, 'id' | 'createdAt' | 'upda
 
 export async function getContentById(id: number, category?: string): Promise<Content | null> {
   const query = db.select().from(contents).$dynamic();
-  
+
   if (category) {
     query.where(and(eq(contents.id, id), eq(contents.category, category)));
   } else {
     query.where(eq(contents.id, id));
   }
-  
+
   const [content] = await query;
   return content || null;
 }
 
 export async function getContents(category?: string): Promise<Content[]> {
   const query = db.select().from(contents).$dynamic();
-  
+
   if (category) {
     query.where(eq(contents.category, category));
   }
-  
+
   return query.orderBy(desc(contents.publishedAt));
 }
 
@@ -165,8 +165,8 @@ export async function createContent(data: NewContent): Promise<Content> {
 }
 
 export async function updateContent(
-  id: number, 
-  data: Partial<Omit<NewContent, 'id' | 'createdAt'>>
+  id: number,
+  data: Partial<Omit<NewContent, 'id' | 'createdAt'>>,
 ): Promise<Content> {
   const [content] = await db
     .update(contents)
@@ -180,10 +180,7 @@ export async function updateContent(
 }
 
 export async function deleteContent(id: number): Promise<Content | undefined> {
-  const [content] = await db
-    .delete(contents)
-    .where(eq(contents.id, id))
-    .returning();
+  const [content] = await db.delete(contents).where(eq(contents.id, id)).returning();
   return content;
 }
 
@@ -192,26 +189,17 @@ export async function deleteContent(id: number): Promise<Content | undefined> {
 // ============================================
 
 export async function getUserById(id: number): Promise<User | null> {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, id));
+  const [user] = await db.select().from(users).where(eq(users.id, id));
   return user || null;
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email));
+  const [user] = await db.select().from(users).where(eq(users.email, email));
   return user || null;
 }
 
 export async function getUserByUsername(username: string): Promise<User | null> {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, username));
+  const [user] = await db.select().from(users).where(eq(users.username, username));
   return user || null;
 }
 
@@ -243,12 +231,12 @@ export async function ensureAdminUser(): Promise<User> {
   try {
     // Check if admin user already exists
     let adminUser = await getUserByEmail(adminEmail);
-    
+
     if (!adminUser) {
       // Create admin user if it doesn't exist
       const hashedPassword = await hash(adminPassword, 10);
       const { db } = getDb();
-      
+
       const [newUser] = await db
         .insert(users)
         .values({
@@ -260,19 +248,19 @@ export async function ensureAdminUser(): Promise<User> {
           updatedAt: new Date(),
         })
         .returning();
-      
+
       if (!newUser) {
         throw new Error('Failed to create admin user');
       }
-      
+
       adminUser = newUser;
       console.log('Admin user created successfully');
     }
-    
+
     if (!adminUser) {
       throw new Error('Admin user not found and could not be created');
     }
-    
+
     return adminUser;
   } catch (error) {
     console.error('Error ensuring admin user:', error);
@@ -280,14 +268,10 @@ export async function ensureAdminUser(): Promise<User> {
   }
 }
 
-// Set default admin credentials if not provided in environment
-process.env.ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
-process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-
 // Initialize admin user on startup if no users exist
 async function initializeAdmin() {
   if (typeof window !== 'undefined') return; // Skip in browser
-  
+
   try {
     const { pool } = getDb();
     const client = await pool.connect();
@@ -295,14 +279,14 @@ async function initializeAdmin() {
       // Check if users table exists and has any users
       const result = await client.query(`
         SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
           AND table_name = 'users'
         )
       `);
-      
+
       const usersTableExists = result.rows[0].exists;
-      
+
       if (usersTableExists) {
         const db = getDatabase();
         const existingUsers = await db.select().from(users).limit(1);
@@ -337,7 +321,7 @@ export async function testConnection() {
     console.log('Database connection test skipped in browser');
     return;
   }
-  
+
   const { pool } = getDb();
   const client = await pool.connect();
   try {

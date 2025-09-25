@@ -11,13 +11,9 @@ import {
   updateContent as dbUpdateContent,
   deleteContent as dbDeleteContent,
   getUserByUsername,
-  createUser as createUserDb,
   users,
-  type Content,
   type NewContent,
-  type User,
   db,
-  getDb
 } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { compare, hash } from 'bcryptjs';
@@ -86,7 +82,7 @@ export async function getSession() {
       return null;
     }
     return session as { userId: string; role: string; email: string; expiresAt: number };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -117,21 +113,12 @@ export async function logoutAction() {
   redirect('/login');
 }
 
-interface ContentData {
-  title: string;
-  content: string;
-  category?: string;
-  tags?: string[] | null;
-  featuredImage?: string | null;
-  isPublished?: boolean;
-  metadata?: Record<string, any>;
-  createdAt?: Date;
-  updatedAt?: Date;
-};
+// Removed unused ContentData interface
 
 export async function createContentAction(formData: FormData) {
   try {
     const { title, content, category, isPublished } = Object.fromEntries(formData.entries());
+    const locationName = formData.get('locationName');
     // Get all tags from form data and ensure they're strings
     const tags = formData.getAll('tags').map(tag => String(tag));
 
@@ -149,6 +136,9 @@ export async function createContentAction(formData: FormData) {
       tags: tags,
       featuredMedia: savedFileName,
       isPublished: isPublished === 'on' || isPublished === 'true',
+      metadata: locationName && String(locationName).trim().length > 0
+        ? { locationName: String(locationName) }
+        : undefined,
     });
     
     revalidatePath('/admin');
@@ -165,9 +155,9 @@ export async function updatePage(formData: FormData) {
     const title = formData.get('title');
     const content = formData.get('content');
     const category = formData.get('category');
-    const tags = formData.get('tags');
     const isPublished = formData.get('isPublished');
     const featuredImage = formData.get('featuredImage') as File | null;
+    const locationName = formData.get('locationName');
     
     // For new content (id === '0'), we need to create it first
     if (id === '0') {
@@ -180,6 +170,9 @@ export async function updatePage(formData: FormData) {
         tags: createTagsArray,
         featuredMedia: null, // Will be updated after file upload
         isPublished: isPublished === 'true',
+        metadata: locationName && String(locationName).trim().length > 0
+          ? { locationName: String(locationName) }
+          : undefined,
       });
       
       // If there's a file to upload, handle it after creating the content
@@ -204,20 +197,26 @@ export async function updatePage(formData: FormData) {
     // Get all tags from form data (they come as separate entries with the same key)
     const tagsArray = formData.getAll('tags').map(tag => String(tag));
     
-    const updateData: any = {
+    const updateData: Partial<NewContent> = {
       title: String(title),
       content: String(content),
       category: category ? String(category) : null,
       tags: tagsArray,
       isPublished: isPublished === 'true',
     };
-    
+
     // Only update featured media if a new file was uploaded
     if (featuredImage && featuredImage instanceof File) {
       const fileName = await saveUploadedFile(featuredImage);
       updateData.featuredMedia = fileName;
     }
-    
+
+    // Update metadata if provided
+    if (locationName !== null && locationName !== undefined) {
+      const value = String(locationName).trim();
+      updateData.metadata = value.length > 0 ? { locationName: value } : {};
+    }
+
     const updatedContent = await dbUpdateContent(contentId, updateData);
     
     revalidatePath('/admin');
@@ -229,6 +228,11 @@ export async function updatePage(formData: FormData) {
     return { success: false, message: 'Failed to update content: ' + (error as Error).message };
   }
 }
+export interface ContentMetadata {
+  locationName?: string;
+  location?: string;
+  [key: string]: unknown;
+}
 
 export interface ContentItem {
   id: number;
@@ -239,7 +243,7 @@ export interface ContentItem {
   publishedAt?: Date | null;
   category?: string | null;
   tags?: string[] | null;
-  metadata?: Record<string, any>;
+  metadata?: ContentMetadata;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
@@ -248,22 +252,38 @@ export async function getContents(): Promise<{ success: boolean; data?: ContentI
   try {
     const contents = await dbGetContents();
     const formattedContents: ContentItem[] = contents.map(content => {
-      const item: ContentItem = {
+      // Safely handle metadata with type assertion
+      let metadata: ContentMetadata | undefined;
+      if (content.metadata && typeof content.metadata === 'object') {
+        metadata = {} as ContentMetadata;
+        // Copy known properties
+        if ('locationName' in content.metadata && typeof content.metadata.locationName === 'string') {
+          metadata.locationName = content.metadata.locationName;
+        }
+        if ('location' in content.metadata && typeof content.metadata.location === 'string') {
+          metadata.location = content.metadata.location;
+        }
+        // Copy other properties
+        Object.entries(content.metadata).forEach(([key, value]) => {
+          if (key !== 'locationName' && key !== 'location') {
+            (metadata as Record<string, unknown>)[key] = value;
+          }
+        });
+      }
+
+      return {
         id: content.id,
         title: content.title,
         content: content.content || '',
+        metadata,
+        featuredMedia: content.featuredMedia || null,
+        isPublished: content.isPublished ?? null,
+        publishedAt: content.publishedAt || null,
+        category: content.category || null,
+        tags: content.tags || null,
+        createdAt: content.createdAt,
+        updatedAt: content.updatedAt || null
       };
-      
-      if (content.featuredMedia) item.featuredMedia = content.featuredMedia;
-      if (content.isPublished !== undefined) item.isPublished = content.isPublished;
-      if (content.publishedAt) item.publishedAt = content.publishedAt;
-      if (content.category) item.category = content.category;
-      if (content.tags) item.tags = content.tags;
-      if (content.metadata) item.metadata = content.metadata;
-      if (content.createdAt) item.createdAt = content.createdAt;
-      if (content.updatedAt) item.updatedAt = content.updatedAt;
-      
-      return item;
     });
     
     return { success: true, data: formattedContents };
@@ -366,12 +386,14 @@ export async function registerAction(formData: FormData) {
       })
       .returning();
 
-    // Log the user in automatically after registration
-    // Set session in localStorage
-    const session = {
-      id: newUser.id,
-      username: newUser.username,
-      role: newUser.role || 'editor',
+    // Registration successful; return minimal info so client can establish session if desired
+    return {
+      success: true,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        role: newUser.role || 'editor',
+      },
     };
   } catch (error) {
     console.error('Registration error:', error);
