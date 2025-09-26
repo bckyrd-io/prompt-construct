@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { loginAction } from "../actions";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
@@ -51,14 +53,28 @@ export default function LoginPage() {
                     className="w-full mb-4 px-3 py-2 border rounded"
                     required
                 />
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full mb-6 px-3 py-2 border rounded"
-                    required
-                />
+                <div className="relative mb-6">
+                    <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="w-full px-3 py-2 border rounded pr-10"
+                        required
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                        {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                        ) : (
+                            <Eye className="h-5 w-5" />
+                        )}
+                    </button>
+                </div>
                 <button 
                     type="submit" 
                     className="w-full bg-primary text-white py-2 rounded font-semibold"
