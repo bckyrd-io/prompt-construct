@@ -611,25 +611,27 @@ function WorkSection() {
       {/* Image Modal */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
         >
-          <div className="relative max-w-4xl w-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-4xl">
+            <Image
+              src={selectedImage}
+              alt="Enlarged view"
+              width={1200}
+              height={800}
+              className="w-full h-auto max-h-[80vh] object-contain"
+              unoptimized
+            />
             <button
               className="absolute -top-10 right-0 text-white hover:text-gray-300"
-              onClick={() => setSelectedImage(null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage(null);
+              }}
             >
               <X size={24} />
             </button>
-            <div className="relative w-full h-full">
-              <Image
-                src={selectedImage}
-                alt="Enlarged view"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
           </div>
         </div>
       )}
@@ -746,25 +748,27 @@ function ServiceSection() {
       {/* Image Modal */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
         >
-          <div className="relative max-w-4xl w-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-4xl">
+            <Image
+              src={selectedImage}
+              alt="Enlarged view"
+              width={1200}
+              height={800}
+              className="w-full h-auto max-h-[80vh] object-contain"
+              unoptimized
+            />
             <button
               className="absolute -top-10 right-0 text-white hover:text-gray-300"
-              onClick={() => setSelectedImage(null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage(null);
+              }}
             >
               <X size={24} />
             </button>
-            <div className="relative w-full h-full">
-              <Image
-                src={selectedImage}
-                alt="Enlarged view"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
           </div>
         </div>
       )}

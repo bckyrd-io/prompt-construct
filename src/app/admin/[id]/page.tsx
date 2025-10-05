@@ -219,8 +219,8 @@ export default function EditPage({ params }: { params: { id: string } }) {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8 pt-0">
-            <div className="max-w-2xl mx-auto bg-white p-8 pt-2 rounded shadow">
+        <div className="min-h-screen bg-gray-50 px-4 py-8">
+            <div className="max-w-2xl mx-auto bg-white p-4 sm:p-8 pt-2 rounded shadow-none">
                 <div className="flex items-center mb-6">
                     <button
                         className="text-primary hover:text-secondary flex items-center gap-2"

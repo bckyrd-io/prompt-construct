@@ -327,7 +327,7 @@ export default function ProjectsPage() {
       <main className="flex-1">
         <section className="py-12 lg:py-20 bg-white">
           <div className="container mx-auto px-4">
-            <div className="text-left mb-10">
+            <div className="text-left mb-10 mt-10">
               <h1 className="text-3xl lg:text-4xl font-bold text-primary mb-2">Our Projects</h1>
               <p className="text-gray-600 max-w-2xl">Completed, in-progress, and service projects at a glance.</p>
             </div>
