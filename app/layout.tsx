@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Work_Sans, Geist } from "next/font/google";
+import { Work_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", workSans.variable, "font-sans", geist.variable)}
+      className={cn("h-full", "antialiased", workSans.variable, "font-sans", inter.variable)}
     >
       <head>
         <link

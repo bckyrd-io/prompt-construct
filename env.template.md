@@ -3,22 +3,25 @@
 Copy these variables to your `.env.local` file and fill in your actual values:
 
 ```env
-# Paychangu Inline Checkout (Client-side Public Key)
-NEXT_PUBLIC_PAYCHANGU_PUBLIC_KEY=your_public_key_here
+# Paychangu Payment Integration
+PAYCHANGU_SECRET_KEY=your_secret_key_here
+
+# Optional: Enable simulation mode for testing (no real API calls)
+PAYMENT_SIMULATION=true
 ```
 
 ## Getting Your Paychangu Credentials
 
 1. Sign up at https://paychangu.com
 2. Navigate to Developer/API section in your dashboard
-3. Copy your **Public Key** (starts with `pub-`)
-4. Paste it as the value for `NEXT_PUBLIC_PAYCHANGU_PUBLIC_KEY`
+3. Copy your Secret Key
+4. Paste it as the value for `PAYCHANGU_SECRET_KEY`
 
-## Test Card Numbers
+## Simulation Mode
 
-- **Test Card**: 4242 4242 4242 4242
-- **Test Airtel Money**: 990000000
+When `PAYMENT_SIMULATION=true`, the payment flow will be simulated without making real API calls. This is useful for:
+- Development without live credentials
+- Testing the UI flow
+- CI/CD pipelines
 
-## How It Works
-
-The Inline Checkout uses a client-side public key to open a popup modal on your page. No server-side API calls are needed to initiate payments. The user completes payment in the popup, then gets redirected back to your callback URL.
+Remove or set to `false` to use live Paychangu API.

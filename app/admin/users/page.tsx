@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { LayoutDashboard, Package, Users, BarChart3, Settings, Building2, User, UserCheck, Shield, Clock, UserPlus, Search, Pencil, Ban, Trash2 , ChevronsUpDown, LogOut } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sidebar, SidebarProvider, SidebarTrigger, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Hardcoded users data
 const usersData = {
@@ -111,11 +120,11 @@ const usersData = {
     }
   ],
   navItems: [
-    { name: "Dashboard", icon: "dashboard", href: "/admin/reports" },
-    { name: "Listings", icon: "inventory_2", href: "/admin/listings" },
-    { name: "Leads", icon: "group", active: true, href: "/admin/users" },
-    { name: "Analytics", icon: "analytics", href: "/admin/reports" },
-    { name: "Settings", icon: "settings", href: "#" }
+    { name: "Dashboard", icon: LayoutDashboard, href: "/admin/reports" },
+    { name: "Listings", icon: Package, href: "/admin/listings" },
+    { name: "Leads", icon: Users, active: true, href: "/admin/users" },
+    { name: "Analytics", icon: BarChart3, href: "/admin/reports" },
+    { name: "Settings", icon: Settings, href: "#" }
   ]
 };
 
@@ -137,228 +146,223 @@ export default function AdminUsersPage() {
   });
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
-      {/* Admin Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex">
-        <div className="p-4 border-b border-gray-100">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#ffc300] flex items-center justify-center text-black rounded">
-              <span className="material-symbols-outlined font-bold">construction</span>
-            </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-wide uppercase">RoyConstruction</h1>
-              <p className="text-xs text-gray-500">Admin Portal</p>
-            </div>
-          </Link>
-        </div>
-        <nav className="flex-1 p-3 space-y-1">
-          {usersData.navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                item.active 
-                  ? "bg-[#ffc300]/10 text-black" 
-                  : "text-gray-600 hover:bg-gray-50 hover:text-black"
-              }`}
-            >
-              <span className={`material-symbols-outlined ${item.active ? "text-black" : "text-gray-400"}`}>
-                {item.icon}
-              </span>
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gray-300 rounded flex items-center justify-center">
-              <span className="material-symbols-outlined text-gray-600">person</span>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-black">Tom Cook</p>
-              <p className="text-xs text-gray-500">Site Manager</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <nav className="flex items-center gap-2 text-sm mb-2">
-                <Link href="/admin/reports" className="text-gray-500 hover:text-black">Dashboard</Link>
-                <span className="text-gray-300">/</span>
-                <span className="text-black font-bold underline decoration-[#ffc300] decoration-2 underline-offset-4">User Management</span>
-              </nav>
-              <h1 className="text-3xl font-bold text-black">User Management</h1>
-            </div>
-           
-          </div>
-        </header>
-
-        <div className="p-8">
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-            {[
-              { label: "Total Users", value: usersData.stats.totalUsers, icon: "group" },
-              { label: "Active Clients", value: usersData.stats.activeClients, icon: "person_check" },
-              { label: "Admin Users", value: usersData.stats.adminUsers, icon: "admin_panel_settings" },
-              { label: "Pending Verification", value: usersData.stats.pendingVerifications, icon: "pending", alert: true },
-              { label: "New This Month", value: usersData.stats.newThisMonth, icon: "person_add" }
-            ].map((stat, idx) => (
-              <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl font-bold text-black">{stat.value}</span>
-                  <span className={`material-symbols-outlined ${stat.alert ? 'text-orange-500' : 'text-[#ffc300]'}`}>
-                    {stat.icon}
-                  </span>
-                </div>
-                <p className="text-xs font-bold uppercase text-gray-500">{stat.label}</p>
+    <SidebarProvider>
+            <div className="flex min-h-screen w-full bg-muted/40">
+        <Sidebar collapsible="icon" className="border-r border-border !bg-white">
+          <SidebarHeader className="h-16 border-b flex items-center justify-center px-4">
+            <Link href="/" className="flex items-center gap-3 w-full overflow-hidden group-data-[collapsible=icon]:justify-center">
+              <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Building2 className="size-4" />
               </div>
+              <div className="flex flex-col leading-none truncate group-data-[collapsible=icon]:hidden">
+                <span className="font-semibold tracking-tight text-sm">RoyConstruction</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Admin Portal</span>
+              </div>
+            </Link>
+          </SidebarHeader>
+          <SidebarContent className="p-4">
+            <SidebarMenu className="gap-2">
+              {usersData.navItems.map((item) => (
+                <SidebarMenuItem className="w-full" key={item.name}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={item.active} 
+                    tooltip={item.name}
+                    className="h-10 px-3 transition-colors"
+                  >
+                    <Link href={item.href} className={`flex items-center gap-3 group-data-[collapsible=icon]:justify-center ${item.active ? 'bg-primary/10' : ''}`}>
+                      <item.icon className="size-4 shrink-0" />
+                      <span className={`text-sm font-medium group-data-[collapsible=icon]:hidden ${item.active ? 'text-primary' : ''}`}>{item.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          
+          <SidebarFooter className="border-t p-4">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton size="lg" className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center">
+                      <Avatar className="h-8 w-8 rounded-lg border">
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-medium text-xs">TC</AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                        <span className="truncate font-semibold">Tom Cook</span>
+                        <span className="truncate text-xs text-muted-foreground">Site Manager</span>
+                      </div>
+                      <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                    side="bottom"
+                    align="end"
+                    sideOffset={4}
+                  >
+                    <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
+                      <Avatar className="h-8 w-8 rounded-lg border">
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-medium text-xs">TC</AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">Tom Cook</span>
+                        <span className="truncate text-xs text-muted-foreground">tom.cook@example.com</span>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4 text-muted-foreground" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+
+        <main className="flex-1 flex flex-col h-screen overflow-hidden">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-6 transition-all">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="-ml-2 text-muted-foreground hover:text-foreground" />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-semibold tracking-tight text-foreground">User Management</span>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto p-8">
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[
+              { label: "Total Users", value: usersData.stats.totalUsers, icon: Users },
+              { label: "Active Clients", value: usersData.stats.activeClients, icon: UserCheck },
+              { label: "Admin Users", value: usersData.stats.adminUsers, icon: Shield },
+              { label: "Pending Verification", value: usersData.stats.pendingVerifications, icon: Clock, alert: true },
+            
+            ].map((stat, idx) => (
+              <Card key={idx} className="shadow-sm border-border">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-2xl font-bold text-foreground">{stat.value}</span>
+                    <stat.icon className={`w-5 h-5 ${stat.alert ? 'text-orange-500' : 'text-primary'}`} />
+                  </div>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">{stat.label}</p>
+                </CardContent>
+              </Card>
             ))}
           </div>
 
-          {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-              {["all", "clients", "admins", "pending"].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${
-                    filter === f 
-                      ? "bg-[#ffc300] text-black" 
-                      : "text-gray-500 hover:text-black"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1"></div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined">search</span>
-              <input 
-                type="text" 
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#ffc300] outline-none w-full sm:w-64"
-              />
-            </div>
-          </div>
-
+         
           {/* Users Table */}
-          <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">User</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Role</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Projects</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Joined</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Last Active</th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 bg-[#ffc300]/20 flex items-center justify-center text-xs font-bold text-black rounded-full">
-                            {user.initials}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-bold text-black">{user.name}</div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
-                          </div>
+          <Card className="shadow-sm border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground">User</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Role</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Projects</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Joined</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Last Active</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-muted-foreground text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 bg-primary/20 flex items-center justify-center text-xs font-bold text-foreground rounded-full">
+                          {user.initials}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
-                          user.role === 'Admin' 
-                            ? 'bg-purple-100 text-purple-700' 
-                            : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                          user.status === 'Active' 
-                            ? 'bg-green-100 text-green-700' 
-                            : user.status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            user.status === 'Active' ? 'bg-green-500' : 
-                            user.status === 'Pending' ? 'bg-yellow-500' : 'bg-gray-400'
-                          }`}></span>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-bold text-black">{user.projects}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-500">{user.joined}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-500">{user.lastActive}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className="p-2 text-gray-400 hover:text-[#ffc300] transition-colors">
-                            <span className="material-symbols-outlined text-sm">edit</span>
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                            <span className="material-symbols-outlined text-sm">block</span>
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
-                            <span className="material-symbols-outlined text-sm">delete</span>
-                          </button>
+                        <div className="ml-4">
+                          <div className="text-sm font-semibold text-foreground">{user.name}</div>
+                          <div className="text-xs text-muted-foreground">{user.email}</div>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={`uppercase text-xs ${
+                        user.role === 'Admin' 
+                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-100' 
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                      }`}>
+                        {user.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`gap-1 uppercase text-xs ${
+                        user.status === 'Active' 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-100' 
+                          : user.status === 'Pending'
+                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-100'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          user.status === 'Active' ? 'bg-green-500' : 
+                          user.status === 'Pending' ? 'bg-yellow-500' : 'bg-gray-400'
+                        }`}></span>
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-semibold text-foreground">{user.projects}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{user.joined}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{user.lastActive}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:text-primary">
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:text-red-500">
+                          <Ban className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-16">
-              <div className="bg-gray-100 p-6 rounded-full inline-block mb-4">
-                <span className="material-symbols-outlined text-4xl text-gray-400">group_off</span>
+            <Card className="p-16 text-center">
+              <div className="bg-muted p-6 rounded-full inline-block mb-4">
+                <Users className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-bold text-black mb-2">No users found</h3>
-              <p className="text-gray-500 mb-4">Try adjusting your filters or search query</p>
-            </div>
+              <CardTitle className="text-lg font-semibold text-foreground mb-2">No users found</CardTitle>
+              <p className="text-muted-foreground mb-4">Try adjusting your filters or search query</p>
+            </Card>
           )}
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Showing {filteredUsers.length} of {usersData.users.length} users
             </p>
             <div className="flex gap-2">
-              <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-500 hover:text-black disabled:opacity-50" disabled>
+              <Button variant="outline" className="h-11 border-border" disabled>
                 Previous
-              </button>
-              <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-500 hover:text-black">
+              </Button>
+              <Button variant="outline" className="h-11 border-border">
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </main>
     </div>
+    </SidebarProvider>
   );
 }

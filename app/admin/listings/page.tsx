@@ -3,6 +3,15 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { LayoutDashboard, Package, Users, BarChart3, Settings, Building2, User, Plus, Clock, DollarSign, ListFilter, MapPin, Check, Hourglass, Camera , ChevronsUpDown, LogOut } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Sidebar, SidebarProvider, SidebarTrigger, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Hardcoded admin listings data
 const adminListingsData = {
@@ -10,7 +19,7 @@ const adminListingsData = {
     totalListings: 48,
     activeProjects: 12,
     pendingApprovals: 5,
-    inventoryValue: 28400000
+
   },
   listings: [
     {
@@ -102,11 +111,11 @@ const adminListingsData = {
     }
   ],
   navItems: [
-    { name: "Dashboard", icon: "dashboard", href: "/admin/reports" },
-    { name: "Listings", icon: "inventory_2", active: true, href: "/admin/listings" },
-    { name: "Leads", icon: "group", href: "/admin/users" },
-    { name: "Analytics", icon: "analytics", href: "/admin/reports" },
-    { name: "Settings", icon: "settings", href: "#" }
+    { name: "Dashboard", icon: LayoutDashboard, href: "/admin/reports" },
+    { name: "Listings", icon: Package, active: true, href: "/admin/listings" },
+    { name: "Leads", icon: Users, href: "/admin/users" },
+    { name: "Analytics", icon: BarChart3, href: "/admin/reports" },
+    { name: "Settings", icon: Settings, href: "#" }
   ]
 };
 
@@ -120,130 +129,134 @@ export default function AdminListingsPage() {
   });
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
-      {/* Admin Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex-col hidden md:flex">
-        <div className="p-4 border-b border-gray-100">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#ffc300] flex items-center justify-center text-black rounded">
-              <span className="material-symbols-outlined font-bold">construction</span>
-            </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-wide uppercase">RoyConstruction</h1>
-              <p className="text-xs text-gray-500">Admin Portal</p>
-            </div>
-          </Link>
-        </div>
-        <nav className="flex-1 p-3 space-y-1">
-          {adminListingsData.navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                item.active 
-                  ? "bg-[#ffc300]/10 text-black" 
-                  : "text-gray-600 hover:bg-gray-50 hover:text-black"
-              }`}
-            >
-              <span className={`material-symbols-outlined ${item.active ? "text-black" : "text-gray-400"}`}>
-                {item.icon}
-              </span>
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gray-300 rounded flex items-center justify-center">
-              <span className="material-symbols-outlined text-gray-600">person</span>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-black">Tom Cook</p>
-              <p className="text-xs text-gray-500">Site Manager</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <nav className="flex items-center gap-2 text-sm mb-2">
-                <Link href="/admin/reports" className="text-gray-500 hover:text-black">Dashboard</Link>
-                <span className="text-gray-300">/</span>
-                <span className="text-black font-bold underline decoration-[#ffc300] decoration-2 underline-offset-4">Listings</span>
-              </nav>
-              <h1 className="text-3xl font-bold text-black">Property Listings Management</h1>
-            </div>
-            <button className="flex items-center gap-2 bg-[#ffc300] hover:bg-[#e6b000] text-black px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors">
-              <span className="material-symbols-outlined">add</span>
-              New Listing
-            </button>
-          </div>
-        </header>
-
-        <div className="p-8">
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[
-              { label: "Total Listings", value: adminListingsData.stats.totalListings, icon: "inventory_2", color: "bg-blue-50 text-blue-600" },
-              { label: "Active Projects", value: adminListingsData.stats.activeProjects, icon: "construction", color: "bg-green-50 text-green-600" },
-              { label: "Pending Approvals", value: adminListingsData.stats.pendingApprovals, icon: "pending", color: "bg-[#ffc300]/20 text-[#e6b000]" },
-              { label: "Inventory Value", value: `$${(adminListingsData.stats.inventoryValue / 1000000).toFixed(1)}M`, icon: "attach_money", color: "bg-purple-50 text-purple-600" }
-            ].map((stat, idx) => (
-              <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase text-gray-500 tracking-wide">{stat.label}</p>
-                    <p className="text-3xl font-bold text-black mt-1">{stat.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-lg ${stat.color}`}>
-                    <span className="material-symbols-outlined">{stat.icon}</span>
-                  </div>
-                </div>
+    <SidebarProvider>
+            <div className="flex min-h-screen w-full bg-muted/40">
+        <Sidebar collapsible="icon" className="border-r border-border !bg-white">
+          <SidebarHeader className="h-16 border-b flex items-center justify-center px-4">
+            <Link href="/" className="flex items-center gap-3 w-full overflow-hidden group-data-[collapsible=icon]:justify-center">
+              <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Building2 className="size-4" />
               </div>
+              <div className="flex flex-col leading-none truncate group-data-[collapsible=icon]:hidden">
+                <span className="font-semibold tracking-tight text-sm">RoyConstruction</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Admin Portal</span>
+              </div>
+            </Link>
+          </SidebarHeader>
+          <SidebarContent className="p-4">
+            <SidebarMenu className="gap-2">
+              {adminListingsData.navItems.map((item) => (
+                <SidebarMenuItem className="w-full" key={item.name}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={item.active} 
+                    tooltip={item.name}
+                    className="h-10 px-3 transition-colors"
+                  >
+                    <Link href={item.href} className={`flex items-center gap-3 group-data-[collapsible=icon]:justify-center ${item.active ? 'bg-primary/10' : ''}`}>
+                      <item.icon className="size-4 shrink-0" />
+                      <span className={`text-sm font-medium group-data-[collapsible=icon]:hidden ${item.active ? 'text-primary' : ''}`}>{item.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          
+          <SidebarFooter className="border-t p-4">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton size="lg" className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center">
+                      <Avatar className="h-8 w-8 rounded-lg border">
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-medium text-xs">TC</AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                        <span className="truncate font-semibold">Tom Cook</span>
+                        <span className="truncate text-xs text-muted-foreground">Site Manager</span>
+                      </div>
+                      <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                    side="bottom"
+                    align="end"
+                    sideOffset={4}
+                  >
+                    <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
+                      <Avatar className="h-8 w-8 rounded-lg border">
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-medium text-xs">TC</AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">Tom Cook</span>
+                        <span className="truncate text-xs text-muted-foreground">tom.cook@example.com</span>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4 text-muted-foreground" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+
+        <main className="flex-1 flex flex-col h-screen overflow-hidden">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-6 transition-all">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="-ml-2 text-muted-foreground hover:text-foreground" />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-semibold tracking-tight text-foreground">Listings</span>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto p-8">
+          {/* Filter Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {[
+              { id: "all", label: "All Listings", count: adminListingsData.stats.totalListings, icon: Package, color: "bg-blue-500" },
+              { id: "active", label: "Active", count: adminListingsData.stats.activeProjects, icon: Building2, color: "bg-green-500" },
+              { id: "pending", label: "Pending", count: adminListingsData.stats.pendingApprovals, icon: Clock, color: "bg-orange-500" },
+              { id: "available", label: "Available", count: adminListingsData.listings.filter(l => l.status === 'available').length, icon: DollarSign, color: "bg-[#ffc300]" }
+            ].map((f) => (
+              <Card
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  filter === f.id 
+                    ? 'ring-2 ring-primary shadow-md' 
+                    : 'hover:border-primary/50'
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">{f.label}</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">{f.count}</p>
+                    </div>
+                    <div className={`p-2 rounded-lg ${f.color} text-white`}>
+                      <f.icon className="w-5 h-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-              {["all", "available", "active", "pending", "completed"].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-md text-sm font-bold uppercase transition-all ${
-                    filter === f 
-                      ? "bg-[#ffc300] text-black" 
-                      : "text-gray-500 hover:text-black"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1"></div>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Search listings..."
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#ffc300] outline-none"
-              />
-              <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-                <span className="material-symbols-outlined text-gray-500">filter_list</span>
-              </button>
-            </div>
-          </div>
+       
 
           {/* Listings Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredListings.map((listing) => (
-              <div key={listing.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="flex">
-                  <div className="relative w-48 h-40 flex-shrink-0">
+              <Card key={listing.id} className="rounded-xl shadow-sm border-border overflow-hidden">
+                <div className="flex relative">
+                  <div className="relative w-48 h-48 flex-shrink-0">
                     <Image 
                       src={listing.image} 
                       alt={listing.name}
@@ -251,35 +264,35 @@ export default function AdminListingsPage() {
                       className="object-cover"
                     />
                     <div className="absolute top-2 left-2">
-                      <span className={`px-2 py-1 text-xs font-bold uppercase rounded-md ${
-                        listing.status === 'active' ? 'bg-green-500 text-white' :
-                        listing.status === 'available' ? 'bg-[#ffc300] text-black' :
-                        listing.status === 'pending' ? 'bg-orange-500 text-white' :
-                        'bg-gray-500 text-white'
+                      <Badge className={`uppercase ${
+                        listing.status === 'active' ? 'bg-green-500 hover:bg-green-600' :
+                        listing.status === 'available' ? 'bg-[#ffc300] hover:bg-[#ffc300] text-black' :
+                        listing.status === 'pending' ? 'bg-orange-500 hover:bg-orange-600' :
+                        'bg-gray-500 hover:bg-gray-600'
                       }`}>
                         {listing.status}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
-                  <div className="flex-1 p-4">
+                  <CardContent className="flex-1 p-4 pb-0 items-start">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h3 className="font-bold text-black">{listing.name}</h3>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">location_on</span>
+                        <h3 className="font-semibold text-foreground">{listing.name}</h3>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
                           {listing.location}
                         </p>
                       </div>
-                      <p className="text-lg font-black text-[#ffc300]">${listing.price.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-primary">${listing.price.toLocaleString()}</p>
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                       <span>{listing.type}</span>
                       {listing.client && (
                         <>
                           <span>•</span>
                           <span className="flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">person</span>
+                            <User className="w-4 h-4" />
                             {listing.client}
                           </span>
                         </>
@@ -288,75 +301,70 @@ export default function AdminListingsPage() {
 
                     {listing.progress > 0 && (
                       <div className="mb-3">
-                        <div className="flex justify-between text-xs font-bold uppercase mb-1">
+                        <div className="flex justify-between text-xs font-semibold uppercase mb-1">
                           <span>Progress</span>
                           <span>{listing.progress}%</span>
                         </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-[#ffc300] rounded-full"
-                            style={{ width: `${listing.progress}%` }}
-                          ></div>
-                        </div>
+                        <Progress value={listing.progress} className="h-2 bg-muted [&>[data-slot=progress-indicator]]:bg-primary" />
                       </div>
                     )}
 
                     {/* Milestone Editor */}
                     {listing.status === 'active' && listing.milestones.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-xs font-bold uppercase text-gray-400 mb-2">Milestones</p>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Milestones</p>
                         <div className="flex flex-wrap gap-2">
                           {listing.milestones.map((milestone, idx) => (
-                            <span 
+                            <Badge 
                               key={idx}
-                              className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
+                              variant="secondary"
+                              className={`flex items-center gap-1 ${
                                 milestone.completed 
-                                  ? 'bg-green-100 text-green-700' 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-100' 
                                   : milestone.current
-                                  ? 'bg-[#ffc300] text-black'
-                                  : 'bg-gray-100 text-gray-400'
+                                  ? 'bg-[#ffc300] text-black hover:bg-[#ffc300]'
+                                  : 'bg-gray-100 text-gray-400 hover:bg-gray-100'
                               }`}
                             >
-                              <span className="material-symbols-outlined text-xs">
-                                {milestone.completed ? 'check' : milestone.current ? 'schedule' : 'pending'}
-                              </span>
+                              {milestone.completed ? <Check className="w-3 h-3" /> : milestone.current ? <Clock className="w-3 h-3" /> : <Hourglass className="w-3 h-3" />}
                               {milestone.name}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    <div className="flex gap-2 mt-3">
-                      <button className="flex-1 py-2 bg-black hover:bg-[#ffc300] hover:text-black text-white text-xs font-bold uppercase rounded-lg transition-colors">
+                    <div className="flex gap-2 mt-3 pb-4">
+                      <Button className="flex-1 h-11 bg-black hover:bg-[#ffc300] hover:text-black text-white font-semibold uppercase transition-colors">
                         Edit
-                      </button>
+                      </Button>
                       {listing.status === 'active' && (
-                        <button className="px-3 py-2 bg-[#ffc300] hover:bg-[#e6b000] text-black text-xs font-bold uppercase rounded-lg transition-colors">
-                          <span className="material-symbols-outlined text-sm">photo_camera</span>
-                        </button>
+                        <Button size="icon" className="h-11 w-11 bg-[#ffc300] hover:bg-[#e6b000] text-black transition-colors">
+                          <Camera className="w-4 h-4" />
+                        </Button>
                       )}
                     </div>
-                  </div>
+                  </CardContent>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
 
           {filteredListings.length === 0 && (
-            <div className="text-center py-16">
-              <div className="bg-gray-100 p-6 rounded-full inline-block mb-4">
-                <span className="material-symbols-outlined text-4xl text-gray-400">inventory_2</span>
+            <Card className="p-16 text-center">
+              <div className="bg-muted p-6 rounded-full inline-block mb-4">
+                <Package className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-bold text-black mb-2">No listings found</h3>
-              <p className="text-gray-500 mb-4">Try adjusting your filters or create a new listing</p>
-              <button className="px-6 py-3 bg-[#ffc300] hover:bg-[#e6b000] text-black font-bold rounded-lg">
+              <CardTitle className="text-lg font-semibold mb-2">No listings found</CardTitle>
+              <p className="text-muted-foreground mb-4">Try adjusting your filters or create a new listing</p>
+              <Button className="h-11 bg-[#ffc300] hover:bg-[#e6b000] text-black font-semibold">
                 Create New Listing
-              </button>
-            </div>
+              </Button>
+            </Card>
           )}
         </div>
       </main>
     </div>
+    </SidebarProvider>
   );
 }
