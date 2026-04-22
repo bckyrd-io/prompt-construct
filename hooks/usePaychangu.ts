@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { PaychanguCheckoutOptions, isPaychanguLoaded } from "@/components/PaychanguScript";
 
 interface UsePaychanguOptions {
-  publicKey: string;
   onSuccess?: (txRef: string) => void;
   onClose?: () => void;
   onError?: (error: Error) => void;
@@ -16,76 +14,70 @@ interface PaymentParams {
   txRef: string;
   milestoneId?: string;
   milestoneName?: string;
+  propertyId?: string;
   customerEmail?: string;
   customerFirstName?: string;
   customerLastName?: string;
+  callbackUrl?: string;
+  returnUrl?: string;
 }
 
-export function usePaychangu({ publicKey, onSuccess, onClose, onError }: UsePaychanguOptions) {
+export function usePaychangu({ onSuccess, onClose, onError }: UsePaychanguOptions) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isScriptReady, setIsScriptReady] = useState(false);
 
-  const initializePayment = useCallback((params: PaymentParams) => {
-    if (!isPaychanguLoaded()) {
-      onError?.(new Error("Paychangu script not loaded"));
-      return;
-    }
-
+  const initializePayment = useCallback(async (params: PaymentParams) => {
     setIsLoading(true);
 
     try {
-      const options: PaychanguCheckoutOptions = {
-        public_key: publicKey,
-        tx_ref: params.txRef,
-        amount: params.amount,
-        currency: params.currency || "USD",
-        customer: {
-          email: params.customerEmail || "client@example.com",
-          first_name: params.customerFirstName || "James",
-          last_name: params.customerLastName || "Roy",
-        },
-        customization: {
-          title: params.milestoneName || "Construction Payment",
-          description: `Payment for: ${params.milestoneName || "Construction Project"}`,
-        },
-        meta: {
-          milestoneId: params.milestoneId || "",
-        },
-      };
+      const response = await fetch('/api/payment/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: params.amount,
+          currency: params.currency || 'MWK',
+          tx_ref: params.txRef,
+          callback_url: params.callbackUrl,
+          return_url: params.returnUrl,
+          customer: {
+            email: params.customerEmail || 'client@example.com',
+            first_name: params.customerFirstName || 'James',
+            last_name: params.customerLastName || 'Roy',
+          },
+          customization: {
+            title: params.milestoneName || 'Construction Payment',
+            description: `Payment for: ${params.milestoneName || 'Construction Project'}`,
+          },
+          meta: {
+            milestoneId: params.milestoneId || '',
+            milestoneName: params.milestoneName || '',
+            propertyId: params.propertyId || '',
+          },
+        }),
+      });
 
-      // Call Paychangu checkout
-      window.PaychanguCheckout!(options);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Payment initialization failed');
+      }
 
-      // Note: Paychangu doesn't provide direct callbacks in the popup version
-      // Success/failure is handled via redirect URLs or webhook
-      // We'll simulate the flow for better UX
-      
-      // After a delay, assume the user completed or closed the popup
-      // In reality, this would be handled by the callback/return URLs
-      setTimeout(() => {
-        setIsLoading(false);
-        onClose?.();
-      }, 1000);
+      const data = await response.json();
+
+      if (data.checkout_url) {
+        onSuccess?.(params.txRef);
+        // Redirect to Paychangu checkout
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
 
     } catch (error) {
       setIsLoading(false);
       onError?.(error instanceof Error ? error : new Error("Payment initialization failed"));
     }
-  }, [publicKey, onSuccess, onClose, onError]);
-
-  const handleScriptLoad = useCallback(() => {
-    setIsScriptReady(true);
-  }, []);
-
-  const handleScriptError = useCallback(() => {
-    onError?.(new Error("Failed to load Paychangu script"));
-  }, [onError]);
+  }, [onSuccess, onError]);
 
   return {
     initializePayment,
     isLoading,
-    isScriptReady,
-    handleScriptLoad,
-    handleScriptError,
   };
 }

@@ -5,26 +5,15 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { PaychanguScript, isPaychanguLoaded } from "@/components/PaychanguScript";
-import { LayoutDashboard, Building2, CreditCard, FileText, Settings, CheckCircle, User, XCircle, ShieldCheck, Lock , ChevronsUpDown, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, CreditCard, FileText, Settings, CheckCircle, User, XCircle, ShieldCheck, Lock as LockIcon, ChevronsUpDown, LogOut } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Toaster } from "@/components/ui/sonner";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Sidebar, SidebarProvider, SidebarTrigger, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
-// Navigation items for client sidebar
-const navItems = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { name: "Milestones", icon: Building2, href: "/dashboard" },
-  { name: "Payment", icon: CreditCard, active: true, href: "/payment" },
-  { name: "Documents", icon: FileText, href: "#" },
-  { name: "Settings", icon: Settings, href: "#" }
-];
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import AppSidebar from "@/components/AppSidebar";
 
 // Hardcoded payment data
 const paymentData = {
@@ -32,7 +21,7 @@ const paymentData = {
     id: "RC-2024-88",
     name: "The Highlands Estate",
     image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-    location: "Austin, TX"
+    location: "Lilongwe"
   },
   balance: {
     total: 450000,
@@ -56,70 +45,131 @@ function PaymentContent() {
   const milestoneId = searchParams.get("milestoneId");
   const amountParam = searchParams.get("amount");
   const nameParam = searchParams.get("name");
+  const propertyIdParam = searchParams.get("propertyId");
   const errorParam = searchParams.get("error");
 
   const [amount, setAmount] = useState(amountParam || paymentData.balance.nextDue.toString());
   const [milestoneName, setMilestoneName] = useState(nameParam || "");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
   const [error, setError] = useState(errorParam ? "Payment was cancelled or failed. Please try again." : "");
   const [transactionId] = useState(() => `PAY-${Date.now()}`);
+  const [property, setProperty] = useState<any>(null);
+  const [balanceInfo, setBalanceInfo] = useState({
+    totalCost: 0,
+    paidAmount: 0,
+    remainingBalance: 0
+  });
+  const isCompletePay = milestoneId === '-1';
 
-  // Get public key from env or use test key
-  const publicKey = process.env.NEXT_PUBLIC_PAYCHANGU_PUBLIC_KEY || "pub-test-HYSBQpa5K91mmXMHrjhkmC6mAjObPJ2u";
+  // Fetch property data if propertyId is provided
+  useEffect(() => {
+    if (propertyIdParam) {
+      fetchPropertyData(propertyIdParam);
+    }
+  }, [propertyIdParam]);
 
-  const handlePayment = useCallback(() => {
+  const fetchPropertyData = async (propId: string) => {
+    try {
+      const response = await fetch(`/api/properties/${propId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProperty(data.property);
+        
+        // Calculate balance
+        if (data.property?.milestones) {
+          const totalCost = data.property.price || 0;
+          const paidAmount = data.property.milestones
+            .filter((m: any) => m.payment_status === 'paid' || m.completed)
+            .reduce((sum: number, m: any) => sum + (m.amount || 0), 0);
+          const remainingBalance = totalCost - paidAmount;
+          
+          setBalanceInfo({
+            totalCost,
+            paidAmount,
+            remainingBalance
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch property:", err);
+    }
+  };
+
+
+  const handlePayment = useCallback(async () => {
     setIsProcessing(true);
     setError("");
 
-    if (!isPaychanguLoaded()) {
-      setError("Payment system not loaded. Please refresh and try again.");
-      setIsProcessing(false);
-      return;
-    }
-
     try {
+      // Validate Complete Pay requires full remaining balance
+      if (isCompletePay) {
+        const requiredAmount = balanceInfo.remainingBalance;
+        const paymentAmount = parseInt(amount || "0");
+        if (paymentAmount !== requiredAmount) {
+          throw new Error(`Complete Payment requires paying the full remaining balance of MK ${requiredAmount.toLocaleString()}`);
+        }
+      }
+
       const tx_ref = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Call Paychangu inline checkout
-      window.PaychanguCheckout!({
-        public_key: publicKey,
-        tx_ref: tx_ref,
-        amount: parseInt(amount),
-        currency: "USD",
-        callback_url: `${window.location.origin}/api/payment/callback`,
-        return_url: `${window.location.origin}/api/payment/return`,
-        customer: {
-          email: "client@example.com",
-          first_name: "James",
-          last_name: "Roy",
-        },
-        customization: {
-          title: milestoneName || "Construction Payment",
-          description: `Payment for: ${milestoneName || "Construction Project"}`,
-        },
-        meta: {
-          milestoneId: milestoneId || "",
-          milestoneName: milestoneName || "",
-        },
+      // Build callback URL - explicitly include port for localhost
+      const protocol = window.location.protocol;
+      const host = window.location.host;
+      // For localhost, explicitly include port 3000
+      const callbackHost = host.includes('localhost') ? 'localhost:3000' : host;
+      const callbackUrl = `${protocol}//${callbackHost}/api/payment/callback`;
+      const returnUrl = `${protocol}//${callbackHost}/api/payment/return`;
+
+      // Call server-side initialization endpoint
+      const response = await fetch('/api/payment/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseInt(amount),
+          currency: 'MWK',
+          tx_ref,
+          callback_url: callbackUrl,
+          return_url: returnUrl,
+          customer: {
+            email: 'client@example.com',
+            first_name: 'James',
+            last_name: 'Roy',
+          },
+          customization: {
+            title: isCompletePay ? 'Complete Payment' : (milestoneName || 'Construction Payment'),
+            description: isCompletePay ? 'Final payment to complete property acquisition' : `Payment for: ${milestoneName || 'Construction Project'}`,
+          },
+          meta: {
+            milestoneId: milestoneId || '',
+            milestoneName: milestoneName || '',
+            propertyId: propertyIdParam || '',
+            amount: amount || '0',
+          },
+        }),
       });
 
-      toast.success("Secure payment initialized. Follow the Paychangu popup to complete.");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Payment initialization failed');
+      }
 
-      // The popup will handle the rest
-      // User will either complete payment or close the popup
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 1000);
+      const data = await response.json();
+
+      if (data.checkout_url) {
+        // Redirect to Paychangu checkout
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
 
     } catch (err) {
       setIsProcessing(false);
-      const message = err instanceof Error ? err.message : "Payment initialization failed";
+      const message = err instanceof Error ? err.message : 'Payment initialization failed';
       setError(message);
       toast.error(message);
     }
-  }, [amount, milestoneId, milestoneName, publicKey]);
+  }, [amount, milestoneId, milestoneName, propertyIdParam, isCompletePay, balanceInfo.remainingBalance]);
 
   if (showSuccess) {
     return (
@@ -129,7 +179,7 @@ function PaymentContent() {
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
           <h2 className="text-2xl font-black text-black mb-2 uppercase">Payment Successful!</h2>
-          <p className="text-gray-500 mb-6">Your payment of ${parseInt(amount).toLocaleString()} has been processed.</p>
+          <p className="text-gray-500 mb-6">Your payment of MK {parseInt(amount).toLocaleString()} has been processed.</p>
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
             <p className="text-sm text-gray-500">Transaction ID</p>
             <p className="font-mono font-bold text-black">{transactionId}</p>
@@ -154,86 +204,9 @@ function PaymentContent() {
   }
 
   return (
-    <SidebarProvider>
-      <PaychanguScript onLoad={() => setScriptLoaded(true)} />
+    <AppSidebar>
       <Toaster />
-              <div className="flex min-h-screen w-full bg-muted/40">
-        <Sidebar collapsible="icon" className="border-r border-border !bg-white">
-          <SidebarHeader className="h-16 border-b flex items-center justify-center px-4">
-            <Link href="/" className="flex items-center gap-3 w-full overflow-hidden group-data-[collapsible=icon]:justify-center">
-              <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Building2 className="size-4" />
-              </div>
-              <div className="flex flex-col leading-none truncate group-data-[collapsible=icon]:hidden">
-                <span className="font-semibold tracking-tight text-sm">RoyConstruction</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">Client Portal</span>
-              </div>
-            </Link>
-          </SidebarHeader>
-          <SidebarContent className="p-4">
-            <SidebarMenu className="gap-2">
-              {navItems.map((item) => (
-                <SidebarMenuItem className="w-full" key={item.name}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={item.active} 
-                    tooltip={item.name}
-                    className="h-10 px-3 transition-colors"
-                  >
-                    <Link href={item.href} className={`flex items-center gap-3 group-data-[collapsible=icon]:justify-center ${item.active ? 'bg-primary/10' : ''}`}>
-                      <item.icon className="size-4 shrink-0" />
-                      <span className={`text-sm font-medium group-data-[collapsible=icon]:hidden ${item.active ? 'text-primary' : ''}`}>{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarContent>
-          
-          <SidebarFooter className="border-t p-4">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton size="lg" className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center">
-                      <Avatar className="h-8 w-8 rounded-lg border">
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-medium text-xs">JR</AvatarFallback>
-                      </Avatar>
-                      <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                        <span className="truncate font-semibold">James Roy</span>
-                        <span className="truncate text-xs text-muted-foreground">Client</span>
-                      </div>
-                      <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                    side="bottom"
-                    align="end"
-                    sideOffset={4}
-                  >
-                    <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
-                      <Avatar className="h-8 w-8 rounded-lg border">
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-medium text-xs">JR</AvatarFallback>
-                      </Avatar>
-                      <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">James Roy</span>
-                        <span className="truncate text-xs text-muted-foreground">james.roy@example.com</span>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-
-        <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
           <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-6 transition-all">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-2 text-muted-foreground hover:text-foreground" />
@@ -260,22 +233,27 @@ function PaymentContent() {
               <CardContent className="pt-0">
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Total Project Cost</span>
-                  <span className="font-bold">${paymentData.balance.total.toLocaleString()}</span>
+                  <span className="text-gray-500">Total Property Cost</span>
+                  <span className="font-bold">MK {(property?.price || balanceInfo.totalCost || paymentData.balance.total).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Amount Paid</span>
-                  <span className="font-bold text-green-600">${paymentData.balance.paid.toLocaleString()}</span>
+                  <span className="font-bold text-green-600">MK {balanceInfo.paidAmount.toLocaleString()}</span>
                 </div>
                 <div className="h-px bg-gray-100"></div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 font-bold">Outstanding</span>
-                  <span className="font-black text-[#ffc300]">${paymentData.balance.outstanding.toLocaleString()}</span>
+                  <span className="text-gray-500 font-bold">Remaining Balance</span>
+                  <span className="font-black text-[#ffc300]">MK {balanceInfo.remainingBalance.toLocaleString()}</span>
                 </div>
               </div>
-              <Progress value={(paymentData.balance.paid / paymentData.balance.total) * 100} className="mt-4 h-2 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#ffc300]" />
+              <Progress 
+                value={balanceInfo.totalCost > 0 ? (balanceInfo.paidAmount / balanceInfo.totalCost) * 100 : 
+                       paymentData.balance.total > 0 ? (paymentData.balance.paid / paymentData.balance.total) * 100 : 0} 
+                className="mt-4 h-2 bg-gray-100 [&>[data-slot=progress-indicator]]:bg-[#ffc300]" 
+              />
               <p className="text-xs text-center text-gray-500 mt-2">
-                {((paymentData.balance.paid / paymentData.balance.total) * 100).toFixed(0)}% Paid
+                {balanceInfo.totalCost > 0 ? ((balanceInfo.paidAmount / balanceInfo.totalCost) * 100).toFixed(0) :
+                 paymentData.balance.total > 0 ? ((paymentData.balance.paid / paymentData.balance.total) * 100).toFixed(0) : 0}% Paid
               </p>
               </CardContent>
             </Card>
@@ -296,48 +274,48 @@ function PaymentContent() {
 
                   {/* Milestone Info */}
                   {milestoneName && (
-                    <div className="mb-6 p-4 bg-[#ffc300]/10 rounded-lg border border-[#ffc300]/20">
-                      <p className="text-xs font-bold uppercase text-gray-500 mb-1">Payment For</p>
+                    <div className={`mb-6 p-4 rounded-lg border ${isCompletePay ? 'bg-green-50 border-green-200' : 'bg-[#ffc300]/10 border-[#ffc300]/20'}`}>
+                      <p className="text-xs font-bold uppercase text-gray-500 mb-1">
+                        {isCompletePay ? 'Final Payment' : 'Payment For'}
+                      </p>
                       <p className="text-lg font-black text-black">{milestoneName}</p>
+                      {isCompletePay && (
+                        <p className="text-xs text-green-700 mt-2">
+                          ✓ All milestones completed • Property ready for final acquisition
+                        </p>
+                      )}
                     </div>
                   )}
 
                   {/* Amount Display */}
 
-
-
-
-
                   <div className="mb-6">
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-3">Payment Amount</label>
+                    <label className="block text-xs font-bold uppercase text-gray-500 mb-3">
+                      {isCompletePay ? 'Final Payment Amount (Fixed)' : 'Payment Amount'}
+                    </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xl">$</span>
                       <Input
                         type="number"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         className="pl-8 text-2xl font-bold h-11 bg-muted border-border"
                         placeholder="0"
+                        disabled={isCompletePay}
                       />
+                      {isCompletePay && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <LockIcon className="w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-2">You can edit the amount above if needed</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      {isCompletePay 
+                        ? 'This is the final payment to complete your property acquisition. The amount is fixed.'
+                        : 'You can edit the amount above if needed'}
+                    </p>
                   </div>
 
-                  {/* Payment Method Info */}
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <ShieldCheck className="w-6 h-6 text-[#ffc300]" />
-                      <div>
-                        <p className="font-bold text-black">Secure Checkout</p>
-                        <p className="text-sm text-gray-500">You will be redirected to Paychangu&apos;s secure payment page where you can pay with:</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-600 border">Credit/Debit Card</span>
-                          <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-600 border">Bank Transfer</span>
-                          <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-600 border">Mobile Money</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                 
 
                   {/* Pay Button */}
                   <Tooltip>
@@ -345,7 +323,7 @@ function PaymentContent() {
                       <Button
                         onClick={handlePayment}
                         disabled={isProcessing || !amount}
-                        className="w-full h-11 bg-black hover:bg-[#ffc300] hover:text-black text-white font-semibold uppercase tracking-wide gap-2"
+                        className={`w-full h-11 font-semibold uppercase tracking-wide gap-2 ${isCompletePay ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-black hover:bg-[#ffc300] hover:text-black text-white'}`}
                       >
                         {isProcessing ? (
                           <>
@@ -354,8 +332,8 @@ function PaymentContent() {
                           </>
                         ) : (
                           <>
-                            <Lock className="w-5 h-5" />
-                            Pay ${parseInt(amount || "0").toLocaleString()}
+                            <ShieldCheck className="w-6 h-6 text-[#ffc300]" />
+                            {isCompletePay ? 'Complete Acquisition' : `Pay MK ${parseInt(amount || "0").toLocaleString()}`}
                           </>
                         )}
                       </Button>
@@ -373,8 +351,7 @@ function PaymentContent() {
         </div>
       </div>
     </main>
-    </div>
-    </SidebarProvider>
+    </AppSidebar>
   );
 }
 

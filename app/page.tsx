@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   HardHat, User, Sparkles, ArrowUp, Menu, Mountain, Calculator,
   Compass, MapPin, Bed, Bath, Square, ArrowRight, Brain, PenTool, BarChart3
@@ -19,14 +20,15 @@ import {
 } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { useAuthStore } from "@/lib/store/auth-store"
 
 const propertiesData = {
   featured: [
     {
       id: "RC-2024-88",
       name: "The Highlands Estate",
-      location: "Austin, TX",
-      price: "$1,200,000",
+      location: "Lilongwe",
+      price: "MK 1,200,000",
       beds: 4,
       baths: 3.5,
       sqft: 3200,
@@ -38,8 +40,8 @@ const propertiesData = {
     {
       id: "RC-2024-92",
       name: "Urban Loft Project",
-      location: "Seattle, WA",
-      price: "$850,000",
+      location: "Blantyre",
+      price: "MK 850,000",
       beds: 2,
       baths: 2,
       sqft: 1800,
@@ -51,8 +53,8 @@ const propertiesData = {
     {
       id: "RC-2024-105",
       name: "Rocky Mountain Estate",
-      location: "Denver, CO",
-      price: "$2,400,000",
+      location: "Mzuzu",
+      price: "MK 2,400,000",
       beds: 5,
       baths: 4,
       sqft: 4500,
@@ -66,8 +68,8 @@ const propertiesData = {
     {
       id: "RC-2024-110",
       name: "Sunset Valley Villa",
-      location: "Phoenix, AZ",
-      price: "$950,000",
+      location: "Zomba",
+      price: "MK 950,000",
       beds: 3,
       baths: 2.5,
       sqft: 2400,
@@ -79,8 +81,8 @@ const propertiesData = {
     {
       id: "RC-2024-115",
       name: "Coastal Haven",
-      location: "Miami, FL",
-      price: "$1,850,000",
+      location: "Mangochi",
+      price: "MK 1,850,000",
       beds: 4,
       baths: 3.5,
       sqft: 3800,
@@ -92,8 +94,8 @@ const propertiesData = {
     {
       id: "RC-2024-120",
       name: "Desert Oasis Ranch",
-      location: "Scottsdale, AZ",
-      price: "$1,100,000",
+      location: "Kasungu",
+      price: "MK 1,100,000",
       beds: 3,
       baths: 2,
       sqft: 2100,
@@ -105,8 +107,8 @@ const propertiesData = {
     {
       id: "RC-2024-125",
       name: "Mountain View Estate",
-      location: "Boulder, CO",
-      price: "$1,650,000",
+      location: "Karonga",
+      price: "MK 1,650,000",
       beds: 4,
       baths: 3,
       sqft: 3100,
@@ -118,8 +120,8 @@ const propertiesData = {
     {
       id: "RC-2024-130",
       name: "Lakefront Paradise",
-      location: "Lake Tahoe, NV",
-      price: "$2,800,000",
+      location: "Salima",
+      price: "MK 2,800,000",
       beds: 5,
       baths: 4.5,
       sqft: 5200,
@@ -131,8 +133,8 @@ const propertiesData = {
     {
       id: "RC-2024-135",
       name: "Modern Minimalist",
-      location: "Portland, OR",
-      price: "$780,000",
+      location: "Dedza",
+      price: "MK 780,000",
       beds: 2,
       baths: 2,
       sqft: 1650,
@@ -214,7 +216,7 @@ function PropertyCard({
           <p className="text-xs text-muted-foreground">{property.status}</p>
         )}
 
-        <Button variant="outline" className="w-full mt-auto h-10 text-sm font-medium" asChild>
+        <Button variant="outline" className="w-full mt-auto h-10 text-sm font-medium">
           <Link href={`/apply?property=${property.id}`}>View Blueprint</Link>
         </Button>
       </CardContent>
@@ -223,7 +225,25 @@ function PropertyCard({
 }
 
 export default function Home() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState("")
+
+  const handleSearch = () => {
+    if (!isAuthenticated) {
+      // Store search query in localStorage for after login
+      if (searchQuery) {
+        localStorage.setItem("searchQuery", searchQuery)
+      }
+      router.push("/auth/login")
+      return
+    }
+    // Store search query in localStorage
+    if (searchQuery) {
+      localStorage.setItem("searchQuery", searchQuery)
+    }
+    router.push("/recommendations")
+  }
 
   return (
     <TooltipProvider>
@@ -234,7 +254,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-2.5">
-                <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary text-primary-foreground">
+                <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary text-dark">
                   <HardHat className="w-5 h-5" />
                 </div>
                 <span className="text-base font-bold tracking-tight">
@@ -264,7 +284,6 @@ export default function Home() {
                       <Button
                         variant="outline"
                         className="justify-start h-11 flex flex-row items-center gap-2"
-                        asChild
                       >
                         <Link href="/auth">
                           <User className="w-4 h-4 shrink-0" />
@@ -277,7 +296,6 @@ export default function Home() {
                           key={action.label}
                           variant="ghost"
                           className="justify-start h-11 flex flex-row items-center gap-2"
-                          asChild
                         >
                           <Link href="#">
                             <action.icon className="w-4 h-4 shrink-0 text-primary" />
@@ -295,14 +313,32 @@ export default function Home() {
                   <Link> directly — no Button in between.
                 */}
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href="/auth"
-                      className="hidden sm:inline-flex flex-row items-center gap-2 h-10 px-5 rounded-md text-sm font-semibold bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors"
-                    >
-                      <User className="w-4 h-4 shrink-0" />
-                      Account
-                    </Link>
+                  <TooltipTrigger>
+                    {isAuthenticated ? (
+                      <Link
+                        href="/recommendations"
+                        className="hidden sm:inline-flex flex-row hover:text-primary/90 transition-colors"
+                      >
+                        {/* <Link
+                        href="/recommendations"
+                        className="hidden sm:inline-flex flex-row items-center gap-2 h-10 px-5 rounded-md text-sm font-semibold bg-secondary text-dark hover:bg-primary/90 transition-colors"
+                      ></Link> */}
+                        {/* <User className="w-4 h-4 shrink-0" />
+                        logged in */}
+                        <Badge variant="outline" className="gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30 rounded-full font-medium">
+                          <span className="size-1.5 rounded-full bg-green-600 animate-pulse" />
+                          AI Active
+                        </Badge>
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/auth/login"
+                        className="hidden sm:inline-flex flex-row items-center gap-2 h-10 px-5 rounded-md text-sm font-semibold bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors"
+                      >
+                        <User className="w-4 h-4 shrink-0" />
+                        Account
+                      </Link>
+                    )}
                   </TooltipTrigger>
                   <TooltipContent>Open your account portal</TooltipContent>
                 </Tooltip>
@@ -325,13 +361,13 @@ export default function Home() {
             </Badge>
 
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-none">
-              Build Your Vision
+              Acquire Your Property
               <br />
               <span className="text-primary">with Agentic AI</span>
             </h1>
 
             <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Describe your dream property. Our AI matches land, architectural designs,
+              Describe your dream property. Our AI matches land
               and construction plans instantly.
             </p>
 
@@ -345,17 +381,12 @@ export default function Home() {
                 placeholder="Try: 'Find a 2-acre lot for a mid-century modern home...'"
               />
               <div className="absolute right-2">
-                {/*
-                  FIX: Plain <Link> styled as button — avoids any
-                  nested <button> issue entirely.
-                */}
-                <Link
-                  href="/chat"
+                <button
+                  onClick={handleSearch}
                   className="h-10 px-5 inline-flex flex-row items-center gap-2 rounded-md text-sm font-semibold bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors"
                 >
                   <ArrowUp className="w-4 h-4 shrink-0" />
-                  Search
-                </Link>
+                </button>
               </div>
             </div>
 

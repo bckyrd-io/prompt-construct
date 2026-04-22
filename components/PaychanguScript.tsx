@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Script from "next/script";
+import { useCallback } from "react";
 
-// Global type augmentation for PaychanguCheckout
-declare global {
-  interface Window {
-    PaychanguCheckout?: (options: PaychanguCheckoutOptions) => void;
-  }
+// Paychangu checkout options interface
+export interface PaychanguCustomer {
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface PaychanguCustomization {
+  title?: string;
+  description?: string;
+  logo?: string;
 }
 
 export interface PaychanguCheckoutOptions {
@@ -16,17 +23,22 @@ export interface PaychanguCheckoutOptions {
   currency: string;
   callback_url?: string;
   return_url?: string;
-  customer: {
-    email: string;
-    first_name: string;
-    last_name: string;
-  };
-  customization?: {
-    title?: string;
-    description?: string;
-    logo?: string;
-  };
-  meta?: Record<string, string | number>;
+  customer: PaychanguCustomer;
+  customization?: PaychanguCustomization;
+  meta?: Record<string, string>;
+}
+
+// Extend Window interface to include Paychangu
+declare global {
+  interface Window {
+    PaychanguCheckout?: (options: PaychanguCheckoutOptions) => void;
+  }
+}
+
+// Check if Paychangu is loaded
+export function isPaychanguLoaded(): boolean {
+  if (typeof window === "undefined") return false;
+  return typeof window.PaychanguCheckout === "function";
 }
 
 interface PaychanguScriptProps {
@@ -35,40 +47,24 @@ interface PaychanguScriptProps {
 }
 
 export function PaychanguScript({ onLoad, onError }: PaychanguScriptProps) {
-  const [loaded, setLoaded] = useState(false);
+  const handleLoad = useCallback(() => {
+    console.log("Paychangu script loaded successfully");
+    onLoad?.();
+  }, [onLoad]);
 
-  useEffect(() => {
-    // Check if script already exists
-    if (document.querySelector('script[src="https://in.paychangu.com/js/popup.js"]')) {
-      setLoaded(true);
-      onLoad?.();
-      return;
-    }
+  const handleError = useCallback(() => {
+    console.error("Failed to load Paychangu script");
+    onError?.();
+  }, [onError]);
 
-    const script = document.createElement("script");
-    script.src = "https://in.paychangu.com/js/popup.js";
-    script.async = true;
-    
-    script.onload = () => {
-      setLoaded(true);
-      onLoad?.();
-    };
-    
-    script.onerror = () => {
-      console.error("Failed to load Paychangu script");
-      onError?.();
-    };
-
-    document.body.appendChild(script);
-
-    return () => {
-      // Don't remove script on unmount to avoid reloading
-    };
-  }, [onLoad, onError]);
-
-  return null;
+  return (
+    <Script
+      src="https://api.paychangu.com/js/paychangu.js"
+      strategy="lazyOnload"
+      onLoad={handleLoad}
+      onError={handleError}
+    />
+  );
 }
 
-export function isPaychanguLoaded(): boolean {
-  return typeof window !== "undefined" && typeof window.PaychanguCheckout === "function";
-}
+export default PaychanguScript;
