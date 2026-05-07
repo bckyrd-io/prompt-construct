@@ -87,8 +87,11 @@ export default function AdminReportsPage() {
     try {
       let usersData: any = null;
       let properties: PropertyData[] = [];
+      let apps: ApplicationData[] = [];
       let completedProjects = 0;
       let activeProjects = 0;
+      let displayedLeadCount = 0;
+      let investmentOpportunityAreas = 0;
 
       // Fetch users
       const usersRes = await fetch("/api/users");
@@ -107,7 +110,6 @@ export default function AdminReportsPage() {
         // Calculate stats
         activeProjects = properties.filter((p: PropertyData) => p.status === 'active').length;
         completedProjects = properties.filter((p: PropertyData) => p.status === 'completed').length;
-        const availableProperties = properties.filter((p: PropertyData) => p.status === 'available').length;
 
         // Calculate market trends as percentages
         const locationStats: Record<string, { count: number; total: number }> = {};
@@ -135,13 +137,40 @@ export default function AdminReportsPage() {
         }).sort((a, b) => b.percentage - a.percentage).slice(0, 5);
 
         setMarketTrends(trends);
+
+        // Calculate investment opportunities based on locations with acquired properties
+        const acquiredLocationCounts: Record<string, number> = {};
+        properties
+          .filter((p: PropertyData) => ['acquired', 'payment_in_progress'].includes(p.status))
+          .forEach((p) => {
+            acquiredLocationCounts[p.location] = (acquiredLocationCounts[p.location] || 0) + 1;
+          });
+
+        investmentOpportunityAreas = Object.values(acquiredLocationCounts)
+          .filter(count => count >= 1) // loosened from > 1 to >= 1
+          .length;
       }
 
       // Fetch applications
       const appsRes = await fetch("/api/applications");
       if (appsRes.ok) {
         const appsData = await appsRes.json();
-        setApplications(appsData.applications || []);
+        apps = appsData.applications || [];
+        setApplications(apps);
+        displayedLeadCount = apps.slice(0, 5).length;
+
+        // DEBUG: log raw app fields to identify correct field names
+        console.log("=== RAW APPS DEBUG ===");
+        console.log("Total apps:", apps.length);
+        apps.forEach((app: any, i: number) => {
+          console.log(`App[${i}]:`, {
+            id: app.id,
+            user_id: app.user_id,
+            property_location: app.property_location,
+            location: app.location,
+            allKeys: Object.keys(app)
+          });
+        });
       }
 
       // Fetch payments for revenue calculation
@@ -155,7 +184,7 @@ export default function AdminReportsPage() {
           setStats(prev => ({
             ...prev,
             revenue: totalRevenue,
-            activeLeads: usersData?.users?.filter((u: UserData) => u.role === 'Client').length || 0,
+            activeLeads: displayedLeadCount,
             projectsCompleted: completedProjects,
             activeProjects: activeProjects
           }));
@@ -170,19 +199,19 @@ export default function AdminReportsPage() {
         setStats(prev => ({
           ...prev,
           revenue: totalRevenue,
-          activeLeads: usersData?.users?.filter((u: UserData) => u.role === 'Client').length || 0,
+          activeLeads: displayedLeadCount,
           projectsCompleted: completedProjects,
           activeProjects: activeProjects
         }));
       }
 
-      // Calculate investment recommendations based on applications vs available properties
-      if (properties.length > 0 && applications.length > 0) {
+      // Calculate investment recommendations using local `apps` variable (not stale state)
+      if (properties.length > 0 && apps.length > 0) {
         const locationDemand: Record<string, number> = {};
         const locationAvailable: Record<string, number> = {};
 
         // Count applications per location
-        applications.forEach((app: ApplicationData) => {
+        apps.forEach((app: ApplicationData) => {
           const location = app.property_location;
           locationDemand[location] = (locationDemand[location] || 0) + 1;
         });
@@ -220,10 +249,58 @@ export default function AdminReportsPage() {
           .sort((a, b) => (b.demand / (b.available || 1)) - (a.demand / (a.available || 1)))
           .slice(0, 3);
 
+        setMarketTrends;
         setInvestmentRecommendations(recommendations);
+
+        // Normalize locations and count applications per user per location
+        const userLocationCount: Record<string, Record<string, number>> = {};
+        const locationTotalCount: Record<string, number> = {};
+
+        apps.forEach((app: ApplicationData) => {
+          const location = (app.property_location || "").trim().toLowerCase();
+          const userId = String(app.user_id);
+
+          if (!userLocationCount[location]) {
+            userLocationCount[location] = {};
+          }
+          userLocationCount[location][userId] = (userLocationCount[location][userId] || 0) + 1;
+          locationTotalCount[location] = (locationTotalCount[location] || 0) + 1;
+        });
+
+        // Calculate physical property density per location from our listings database
+        const propertyLocationCounts: Record<string, number> = {};
+        properties.forEach((p: PropertyData) => {
+          const loc = (p.location || "").trim().toLowerCase();
+          propertyLocationCounts[loc] = (propertyLocationCounts[loc] || 0) + 1;
+        });
+
+        // A location qualifies as an opportunity if:
+        // - At least one user has applied more than once there, OR
+        // - There are multiple total applications in that location, OR
+        // - There is multiple property inventory there (high supply/listing density)
+        const opportunityCount = Object.keys({ ...userLocationCount, ...propertyLocationCounts }).filter(location => {
+          const hasRepeatUser = Object.values(userLocationCount[location] || {}).some(count => count > 1);
+          const hasMultipleApps = (locationTotalCount[location] || 0) > 1;
+          const hasMultipleProperties = (propertyLocationCounts[location] || 0) > 1;
+          return hasRepeatUser || hasMultipleApps || hasMultipleProperties;
+        }).length;
+
+        // DEBUG: log the counts
+        console.log("=== INVESTMENT OPPORTUNITY DEBUG ===");
+        console.log("userLocationCount:", JSON.stringify(userLocationCount, null, 2));
+        console.log("locationTotalCount:", JSON.stringify(locationTotalCount, null, 2));
+        console.log("propertyLocationCounts:", JSON.stringify(propertyLocationCounts, null, 2));
+        console.log("opportunityCount:", opportunityCount);
+
         setStats(prev => ({
           ...prev,
-          investmentOpportunities: recommendations.filter(r => r.demand > (r.available || 1)).length
+          investmentOpportunities: opportunityCount
+        }));
+      } else {
+        // Fallback: use property-based calculation only
+        setStats(prev => ({
+          ...prev,
+          investmentOpportunities: investmentOpportunityAreas
         }));
       }
     } catch (error) {
@@ -259,7 +336,6 @@ export default function AdminReportsPage() {
       });
 
       if (response.ok) {
-        // Refresh data to update the UI
         fetchData();
       } else {
         console.error('Failed to approve application');
@@ -318,17 +394,12 @@ export default function AdminReportsPage() {
             <Card className="shadow-sm border-border relative overflow-hidden">
               <CardHeader className="p-6">
                 <div className="flex items-baseline gap-2">
-                  <CardTitle className="text-4xl font-bold text-foreground">MK{(stats.revenue / 1000000).toFixed(1)}M</CardTitle>
-                  <Badge className="text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-50 rounded-full">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    {stats.revenueGrowth}%
-                  </Badge>
+                  <CardTitle className="text-4xl font-bold text-foreground">MK {stats.revenue.toLocaleString()}</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-semibold uppercase text-muted-foreground mt-2">Total Revenue (YTD)</CardDescription>
+                <CardDescription className="text-xs font-semibold uppercase text-muted-foreground mt-2">Total Revenue</CardDescription>
               </CardHeader>
               <CardContent className="p-6 pt-0">
                 <p className="text-xs font-medium text-muted-foreground bg-muted p-1 px-2 inline-block rounded-md">
-                  + MK 250k vs previous period
                 </p>
               </CardContent>
               <div className="absolute right-4 top-4 bg-[#ffc300]/20 p-2 rounded-md">
@@ -341,7 +412,6 @@ export default function AdminReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Lead Qualification Table */}
             <div className="lg:col-span-2">
-
               <div className="bg-white shadow-sm rounded-lg border border-gray-100 overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -397,10 +467,6 @@ export default function AdminReportsPage() {
 
             {/* Right Column */}
             <div className="flex flex-col gap-6">
-              
-
-             
-
               {/* Market Trends */}
               <div className="bg-white p-6 shadow-sm rounded-lg border border-gray-100">
                 <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-4 border-b-2 border-[#ffc300] pb-2 inline-block">
@@ -426,7 +492,7 @@ export default function AdminReportsPage() {
                 )}
               </div>
 
-              {/* Investment Recommendations */}
+              {/* Investment Recommendations
               <div className="bg-white p-6 shadow-sm rounded-lg border border-gray-100">
                 <h3 className="text-sm font-bold text-black uppercase tracking-wide mb-4 border-b-2 border-[#ffc300] pb-2 inline-block">
                   Investment Recommendations
@@ -449,7 +515,7 @@ export default function AdminReportsPage() {
                 ) : (
                   <p className="text-sm text-gray-500">No recommendations yet</p>
                 )}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
