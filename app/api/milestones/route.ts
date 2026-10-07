@@ -19,17 +19,16 @@ export async function POST(request: NextRequest) {
 
     // Insert new milestone
     const result = await client.query(
-      `INSERT INTO property_milestones (property_id, name, description, cost, payment_status, completed, image_url, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `INSERT INTO property_milestones (property_id, name, amount, payment_status, completed, photos, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
        RETURNING *`,
       [
         property_id,
         name,
-        description || null,
         parseInt(cost), // MWK
-        'pending',
+        'unpaid',
         false,
-        image_url || null
+        image_url ? [image_url] : []
       ]
     );
 

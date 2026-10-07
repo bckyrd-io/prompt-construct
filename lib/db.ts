@@ -1,34 +1,60 @@
 import { Pool, PoolClient } from 'pg';
 
-// Database connection configuration
-// Using environment variables or defaults for pgAdmin offline setup
-const pool = new Pool({
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'db_prompt_construct',
-  user: process.env.POSTGRES_USER || 'postgres',
-  password: process.env.POSTGRES_PASSWORD || 'postgres',
-});
+// Database connection configuration.
+//
+// Two supported modes, so the exact same code runs against the local Postgres
+// used for offline development and against Supabase (or any other hosted
+// Postgres) without edits:
+//
+//   1. Connection string - set DATABASE_URL. This is what Supabase hands out
+//      (postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:6543/postgres).
+//      SSL is enabled automatically; set POSTGRES_SSL=false to disable it.
+//   2. Discrete vars - set POSTGRES_HOST / POSTGRES_PORT / POSTGRES_DB /
+//      POSTGRES_USER / POSTGRES_PASSWORD. Used for the offline/local database.
+//
+// DATABASE_URL always wins when present. See env.template.md.
+const connectionString = process.env.DATABASE_URL?.trim();
+
+const useSsl =
+  process.env.POSTGRES_SSL === 'true' ||
+  (process.env.POSTGRES_SSL !== 'false' && Boolean(connectionString));
+
+const pool = connectionString
+  ? new Pool({
+      connectionString,
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+    })
+  : new Pool({
+      host: process.env.POSTGRES_HOST || 'localhost',
+      port: parseInt(process.env.POSTGRES_PORT || '5432'),
+      database: process.env.POSTGRES_DB || 'db_prompt_construct',
+      user: process.env.POSTGRES_USER || 'postgres',
+      password: process.env.POSTGRES_PASSWORD || 'postgres',
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+    });
 
 // SQL to create tables if they don't exist
 const CREATE_TABLES_SQL = `
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Migration: Update embedding column to 3072 dimensions if it exists with 768
+-- Migration: Update embedding column to 3072 dimensions only if it exists with 768
 DO $$
 BEGIN
-  -- Check if the table exists and has the old embedding dimension
+  -- Check if the table exists and has the old 768 embedding dimension
   IF EXISTS (
     SELECT 1 
-    FROM information_schema.columns 
-    WHERE table_name = 'properties' 
-    AND column_name = 'embedding'
+    FROM pg_attribute a
+    JOIN pg_class c ON a.attrelid = c.oid
+    WHERE c.relname = 'properties' 
+    AND a.attname = 'embedding'
+    AND format_type(a.atttypid, a.atttypmod) = 'vector(768)'
   ) THEN
-    -- Drop the column and recreate with new dimension
-    -- Note: This will delete existing embeddings, regenerate them after migration
     ALTER TABLE properties DROP COLUMN IF EXISTS embedding;
     ALTER TABLE properties ADD COLUMN embedding vector(3072);
+  ELSE
+    -- Ensure embedding column exists
+    ALTER TABLE properties ADD COLUMN IF NOT EXISTS embedding vector(3072);
   END IF;
 END $$;
 

@@ -53,16 +53,16 @@ export async function POST(request: NextRequest) {
     if (existingMilestones.rows.length === 0) {
       // Create first milestone (Application & Verification)
       const milestoneResult = await client.query(
-        `INSERT INTO property_milestones (property_id, name, description, cost, payment_status, completed, created_at, updated_at)
+        `INSERT INTO property_milestones (property_id, name, amount, payment_status, completed, current, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
          RETURNING id`,
         [
           application.property_id,
           'Application & Verification',
-          'Initial application processing and user verification',
           50000, // MWK - verification fee
-          'pending',
-          false
+          'due',
+          false,
+          true
         ]
       );
       milestoneId = milestoneResult.rows[0].id;

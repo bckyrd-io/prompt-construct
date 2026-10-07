@@ -1,3 +1,16 @@
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+# Build scripts that pnpm is allowed to run during install.
+#
+# `allowBuilds` replaces pnpm's interactive approval prompt. The four entries
+# below are the ones pnpm flags; the placeholder values it wrote here
+# ("set this to true or false") are not valid YAML booleans and made
+# `pnpm install` / `pnpm dev` fail its dependency-status check.
+#
+#   sharp          true  - Next.js image optimisation needs the native binary
+#   unrs-resolver  true  - eslint-config-next's resolver needs its binding
+#   msw            false - only used by the shadcn CLI; nothing to compile
+#   protobufjs     false - CLI-only; nothing to compile
+allowBuilds:
+  msw: false
+  protobufjs: false
+  sharp: true
+  unrs-resolver: true
